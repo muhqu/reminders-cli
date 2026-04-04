@@ -15,7 +15,7 @@ private struct ShowLists: ParsableCommand {
         let lists = reminders.getLists()
         switch format {
         case .json:
-            print(encodeToJson(data: lists.map { $0.title }))
+            print(encodeToJson(data: lists))
         case .plain:
             for list in lists {
                 print(list.title)
@@ -418,9 +418,19 @@ private struct NewList: ParsableCommand {
         help: "The name of the source of the list, if all your lists use the same source it will default to that")
     var source: String?
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
         let newList = reminders.newList(with: self.listName, source: self.source)
-        print("Created new list '\(newList.title)'!")
+        switch format {
+        case .json:
+            print(encodeToJson(data: newList))
+        case .plain:
+            print("Created new list '\(newList.title)'!")
+        }
     }
 }
 
