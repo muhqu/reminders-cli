@@ -359,6 +359,30 @@ public final class Reminders {
         }
     }
 
+    func deleteList(named name: String) -> String {
+        let calendar = self.calendar(withName: name)
+        let title = calendar.title
+        do {
+            try Store.removeCalendar(calendar, commit: true)
+            return title
+        } catch let error {
+            print("Failed to delete list with error: \(error)")
+            exit(1)
+        }
+    }
+
+    func renameList(named name: String, newName: String) -> EKCalendar {
+        let calendar = self.calendar(withName: name)
+        calendar.title = newName
+        do {
+            try Store.saveCalendar(calendar, commit: true)
+            return calendar
+        } catch let error {
+            print("Failed to rename list with error: \(error)")
+            exit(1)
+        }
+    }
+
     // MARK: - Recurrence helpers
 
     private static func parseFrequency(_ string: String) -> EKRecurrenceFrequency? {

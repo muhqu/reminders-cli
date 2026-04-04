@@ -424,6 +424,78 @@ private struct NewList: ParsableCommand {
     }
 }
 
+private struct DeleteList: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Delete a list")
+
+    @Argument(
+        help: "The name of the list to delete",
+        completion: .custom(listNameCompletion))
+    var listName: String
+
+    @Flag(
+        help: "Confirm deletion (required for safety)")
+    var confirm = false
+
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
+    func validate() throws {
+        if !self.confirm {
+            throw ValidationError("Must pass --confirm to delete a list")
+        }
+    }
+
+    func run() {
+        let title = reminders.deleteList(named: self.listName)
+        switch format {
+        case .json:
+            let jsonResult: [String: String] = [
+                "title": title,
+                "status": "deleted"
+            ]
+            print(encodeToJson(data: jsonResult))
+        case .plain:
+            print("Deleted list '\(title)'")
+        }
+    }
+}
+
+private struct RenameList: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Rename a list")
+
+    @Argument(
+        help: "The current name of the list",
+        completion: .custom(listNameCompletion))
+    var listName: String
+
+    @Argument(
+        help: "The new name for the list")
+    var newName: String
+
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
+    func run() {
+        let calendar = reminders.renameList(named: self.listName, newName: self.newName)
+        switch format {
+        case .json:
+            let jsonResult: [String: String] = [
+                "title": calendar.title,
+                "status": "renamed"
+            ]
+            print(encodeToJson(data: jsonResult))
+        case .plain:
+            print("Renamed list to '\(calendar.title)'")
+        }
+    }
+}
+
 public struct CLI: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "reminders",
@@ -433,7 +505,9 @@ public struct CLI: ParsableCommand {
             Complete.self,
             Uncomplete.self,
             Delete.self,
+            DeleteList.self,
             Edit.self,
+            RenameList.self,
             Show.self,
             ShowLists.self,
             NewList.self,
