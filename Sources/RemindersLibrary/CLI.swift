@@ -181,13 +181,28 @@ private struct Add: ParsableCommand {
         help: "The notes to add to the reminder")
     var notes: String?
 
+    @Option(
+        help: "Recurrence frequency: daily, weekly, monthly, yearly, none")
+    var `repeat`: String?
+
+    @Option(
+        help: "Recurrence interval (default 1)")
+    var repeatInterval: Int?
+
+    @Option(
+        help: "End date for recurrence")
+    var repeatEnd: DateComponents?
+
     func run() {
         let savedReminder = reminders.addReminder(
             string: self.reminder.joined(separator: " "),
             notes: self.notes,
             toListNamed: self.listName,
             dueDateComponents: self.dueDate,
-            priority: priority)
+            priority: priority,
+            repeatFrequency: self.repeat,
+            repeatInterval: self.repeatInterval,
+            repeatEnd: self.repeatEnd)
 
         switch format {
         case .json:
@@ -335,6 +350,18 @@ private struct Edit: ParsableCommand {
         help: "Set/change the URL of the reminder")
     var url: String?
 
+    @Option(
+        help: "Recurrence frequency: daily, weekly, monthly, yearly, none")
+    var `repeat`: String?
+
+    @Option(
+        help: "Recurrence interval (default 1)")
+    var repeatInterval: Int?
+
+    @Option(
+        help: "End date for recurrence")
+    var repeatEnd: DateComponents?
+
     @Argument(
         parsing: .remaining,
         help: "The new reminder contents")
@@ -342,8 +369,8 @@ private struct Edit: ParsableCommand {
 
     func validate() throws {
         let hasTitle = !self.reminder.isEmpty
-        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil {
-            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url)")
+        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil && self.repeat == nil {
+            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url, --repeat)")
         }
     }
 
@@ -362,7 +389,10 @@ private struct Edit: ParsableCommand {
             newDueDate: self.dueDate,
             newPriority: self.priority,
             newListName: self.list,
-            newURL: self.url
+            newURL: self.url,
+            repeatFrequency: self.repeat,
+            repeatInterval: self.repeatInterval,
+            repeatEnd: self.repeatEnd
         )
 
         switch format {

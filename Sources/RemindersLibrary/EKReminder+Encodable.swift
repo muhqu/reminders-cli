@@ -17,6 +17,15 @@ extension EKReminder: @retroactive Encodable {
         case startDate
         case dueDate
         case list
+        case recurrence
+    }
+
+    private enum RecurrenceCodingKeys: String, CodingKey {
+        case frequency
+        case interval
+        case end
+        case count
+        case daysOfWeek
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -28,7 +37,7 @@ extension EKReminder: @retroactive Encodable {
         try container.encode(self.priority, forKey: .priority)
         try container.encode(self.calendar.title, forKey: .list)
         try container.encodeIfPresent(self.notes, forKey: .notes)
-        
+
         // url field is nil
         // https://developer.apple.com/forums/thread/128140
         try container.encodeIfPresent(self.url, forKey: .url)
@@ -52,17 +61,54 @@ extension EKReminder: @retroactive Encodable {
         if let dueDateComponents = self.dueDateComponents {
             try container.encodeIfPresent(format(dueDateComponents.date), forKey: .dueDate)
         }
-        
+
         if let lastModifiedDate = self.lastModifiedDate {
             try container.encode(format(lastModifiedDate), forKey: .lastModified)
         }
-        
+
         if let creationDate = self.creationDate {
             try container.encode(format(creationDate), forKey: .creationDate)
         }
+
+        if let rule = self.recurrenceRules?.first {
+            var recurrenceContainer = container.nestedContainer(keyedBy: RecurrenceCodingKeys.self, forKey: .recurrence)
+            let frequencyString: String
+            switch rule.frequency {
+            case .daily: frequencyString = "daily"
+            case .weekly: frequencyString = "weekly"
+            case .monthly: frequencyString = "monthly"
+            case .yearly: frequencyString = "yearly"
+            @unknown default: frequencyString = "unknown"
+            }
+            try recurrenceContainer.encode(frequencyString, forKey: .frequency)
+            try recurrenceContainer.encode(rule.interval, forKey: .interval)
+            if let endDate = rule.recurrenceEnd?.endDate {
+                try recurrenceContainer.encodeIfPresent(format(endDate), forKey: .end)
+            }
+            if let count = rule.recurrenceEnd?.occurrenceCount, count > 0 {
+                try recurrenceContainer.encode(count, forKey: .count)
+            }
+            if let daysOfWeek = rule.daysOfTheWeek {
+                let dayNames = daysOfWeek.map { dayName(for: $0.dayOfTheWeek) }
+                try recurrenceContainer.encode(dayNames, forKey: .daysOfWeek)
+            }
+        }
     }
-    
+
     private func format(_ date: Date?) -> String? {
         return date?.ISO8601Format()
+    }
+
+    private func dayName(for day: EKWeekday) -> String {
+        switch day {
+        case .monday: return "monday"
+        case .tuesday: return "tuesday"
+        case .wednesday: return "wednesday"
+        case .thursday: return "thursday"
+        case .friday: return "friday"
+        case .saturday: return "saturday"
+        case .sunday: return "sunday"
+        @unknown default: return "unknown"
+        }
     }
 }

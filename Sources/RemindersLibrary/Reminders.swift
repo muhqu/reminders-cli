@@ -205,7 +205,10 @@ public final class Reminders {
         newDueDate: DateComponents? = nil,
         newPriority: Priority? = nil,
         newListName: String? = nil,
-        newURL: String? = nil
+        newURL: String? = nil,
+        repeatFrequency: String? = nil,
+        repeatInterval: Int? = nil,
+        repeatEnd: DateComponents? = nil
     ) -> EKReminder {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
@@ -235,6 +238,18 @@ public final class Reminders {
                 }
                 if let newURL = newURL {
                     reminder.url = URL(string: newURL)
+                }
+                if let repeatFrequency = repeatFrequency {
+                    // Remove existing recurrence rules
+                    for rule in reminder.recurrenceRules ?? [] {
+                        reminder.removeRecurrenceRule(rule)
+                    }
+                    // Add new rule unless "none"
+                    if repeatFrequency != "none" {
+                        if let rule = Self.makeRecurrenceRule(frequency: repeatFrequency, interval: repeatInterval ?? 1, endDate: repeatEnd) {
+                            reminder.addRecurrenceRule(rule)
+                        }
+                    }
                 }
                 try Store.save(reminder, commit: true)
                 result = reminder
@@ -313,7 +328,10 @@ public final class Reminders {
         notes: String?,
         toListNamed name: String,
         dueDateComponents: DateComponents?,
-        priority: Priority) -> EKReminder
+        priority: Priority,
+        repeatFrequency: String? = nil,
+        repeatInterval: Int? = nil,
+        repeatEnd: DateComponents? = nil) -> EKReminder
     {
         let calendar = self.calendar(withName: name)
         let reminder = EKReminder(eventStore: Store)
@@ -326,6 +344,12 @@ public final class Reminders {
             reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
         }
 
+        if let repeatFrequency = repeatFrequency, repeatFrequency != "none" {
+            if let rule = Self.makeRecurrenceRule(frequency: repeatFrequency, interval: repeatInterval ?? 1, endDate: repeatEnd) {
+                reminder.addRecurrenceRule(rule)
+            }
+        }
+
         do {
             try Store.save(reminder, commit: true)
             return reminder
@@ -333,6 +357,27 @@ public final class Reminders {
             print("Failed to save reminder with error: \(error)")
             exit(1)
         }
+    }
+
+    // MARK: - Recurrence helpers
+
+    private static func parseFrequency(_ string: String) -> EKRecurrenceFrequency? {
+        switch string.lowercased() {
+        case "daily": return .daily
+        case "weekly": return .weekly
+        case "monthly": return .monthly
+        case "yearly": return .yearly
+        default: return nil
+        }
+    }
+
+    private static func makeRecurrenceRule(frequency: String, interval: Int, endDate: DateComponents?) -> EKRecurrenceRule? {
+        guard let freq = parseFrequency(frequency) else {
+            print("Unknown recurrence frequency '\(frequency)'. Use: daily, weekly, monthly, yearly, none")
+            return nil
+        }
+        let end: EKRecurrenceEnd? = endDate?.date.map { EKRecurrenceEnd(end: $0) }
+        return EKRecurrenceRule(recurrenceWith: freq, interval: interval, end: end)
     }
 
     // MARK: - Private functions
