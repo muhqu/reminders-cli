@@ -1,19 +1,28 @@
-RELEASE_BUILD=./.build/apple/Products/Release
-EXECUTABLE=reminders
-ARCHIVE=$(EXECUTABLE).tar.gz
+PREFIX ?= $(HOME)/.local
+EXECUTABLE = reminders
+RELEASE_BUILD = .build/release
+ARCHIVE = $(EXECUTABLE).tar.gz
 
-.PHONY: clean build-release package
+.PHONY: build install uninstall clean package
 
-build-release:
-	swift build --configuration release -Xswiftc -warnings-as-errors --arch arm64 --arch x86_64
+build:
+	swift build -c release
 
-package: build-release
+install: build
+	install -d $(PREFIX)/bin
+	install -m 755 $(RELEASE_BUILD)/$(EXECUTABLE) $(PREFIX)/bin/$(EXECUTABLE)
+	@echo "Installed $(EXECUTABLE) to $(PREFIX)/bin/$(EXECUTABLE)"
+
+uninstall:
+	rm -f $(PREFIX)/bin/$(EXECUTABLE)
+	@echo "Uninstalled $(EXECUTABLE) from $(PREFIX)/bin"
+
+package: build
 	$(RELEASE_BUILD)/$(EXECUTABLE) --generate-completion-script zsh > _reminders
 	tar -pvczf $(ARCHIVE) _reminders -C $(RELEASE_BUILD) $(EXECUTABLE)
-	tar -zxvf $(ARCHIVE)
 	@shasum -a 256 $(ARCHIVE)
-	@shasum -a 256 $(EXECUTABLE)
-	rm $(EXECUTABLE) _reminders
+	rm _reminders
+	@echo "Package created: $(ARCHIVE)"
 
 clean:
 	rm -f $(EXECUTABLE) $(ARCHIVE) _reminders
