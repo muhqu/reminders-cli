@@ -230,7 +230,7 @@ public final class Reminders {
         }
     }
 
-    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?) {
+    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?, outputFormat: OutputFormat = .plain) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
 
@@ -244,7 +244,12 @@ public final class Reminders {
                 reminder.title = newText ?? reminder.title
                 reminder.notes = newNotes ?? reminder.notes
                 try Store.save(reminder, commit: true)
-                print("Updated reminder '\(reminder.title!)'")
+                switch outputFormat {
+                case .json:
+                    print(encodeToJson(data: reminder))
+                case .plain:
+                    print("Updated reminder '\(reminder.title!)'")
+                }
             } catch let error {
                 print("Failed to update reminder with error: \(error)")
                 exit(1)
@@ -256,7 +261,7 @@ public final class Reminders {
         semaphore.wait()
     }
 
-    func setComplete(_ complete: Bool, itemAtIndex index: String, onListNamed name: String) {
+    func setComplete(_ complete: Bool, itemAtIndex index: String, onListNamed name: String, outputFormat: OutputFormat = .plain) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
         let displayOptions = complete ? DisplayOptions.incomplete : .complete
@@ -272,7 +277,12 @@ public final class Reminders {
             do {
                 reminder.isCompleted = complete
                 try Store.save(reminder, commit: true)
-                print("\(action) '\(reminder.title!)'")
+                switch outputFormat {
+                case .json:
+                    print(encodeToJson(data: reminder))
+                case .plain:
+                    print("\(action) '\(reminder.title!)'")
+                }
             } catch let error {
                 print("Failed to save reminder with error: \(error)")
                 exit(1)
@@ -284,7 +294,7 @@ public final class Reminders {
         semaphore.wait()
     }
 
-    func delete(itemAtIndex index: String, onListNamed name: String) {
+    func delete(itemAtIndex index: String, onListNamed name: String, outputFormat: OutputFormat = .plain) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
 
@@ -294,9 +304,24 @@ public final class Reminders {
                 exit(1)
             }
 
+            let title = reminder.title ?? "<unknown>"
+            let externalId = reminder.calendarItemExternalIdentifier ?? ""
+            let id = reminder.calendarItemIdentifier
+
             do {
                 try Store.remove(reminder, commit: true)
-                print("Deleted '\(reminder.title!)'")
+                switch outputFormat {
+                case .json:
+                    let result: [String: String] = [
+                        "id": id,
+                        "externalId": externalId,
+                        "title": title,
+                        "status": "deleted"
+                    ]
+                    print(encodeToJson(data: result))
+                case .plain:
+                    print("Deleted '\(title)'")
+                }
             } catch let error {
                 print("Failed to delete reminder with error: \(error)")
                 exit(1)

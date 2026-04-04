@@ -177,8 +177,13 @@ private struct Complete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName)
+        reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName, outputFormat: format)
     }
 }
 
@@ -195,8 +200,13 @@ private struct Uncomplete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName)
+        reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName, outputFormat: format)
     }
 }
 
@@ -213,8 +223,13 @@ private struct Delete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.delete(itemAtIndex: self.index, onListNamed: self.listName)
+        reminders.delete(itemAtIndex: self.index, onListNamed: self.listName, outputFormat: format)
     }
 }
 
@@ -253,13 +268,19 @@ private struct Edit: ParsableCommand {
         }
     }
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
         let newText = self.reminder.joined(separator: " ")
         reminders.edit(
             itemAtIndex: self.index,
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
-            newNotes: self.notes
+            newNotes: self.notes,
+            outputFormat: format
         )
     }
 }
