@@ -198,6 +198,26 @@ private struct Add: ParsableCommand {
         help: "Alarm spec: date string for absolute, or -Nm/-Nh/-Nd for relative offset (repeatable)")
     var alarm: [String] = []
 
+    @Option(
+        help: "Location title for a location-based reminder")
+    var location: String?
+
+    @Option(
+        help: "Latitude for location-based reminder")
+    var latitude: Double?
+
+    @Option(
+        help: "Longitude for location-based reminder")
+    var longitude: Double?
+
+    @Option(
+        help: "Geofence radius in meters (default 100)")
+    var radius: Double?
+
+    @Option(
+        help: "Trigger on 'enter' or 'leave' (default 'enter')")
+    var proximity: String?
+
     func run() {
         let savedReminder = reminders.addReminder(
             string: self.reminder.joined(separator: " "),
@@ -208,7 +228,12 @@ private struct Add: ParsableCommand {
             repeatFrequency: self.repeat,
             repeatInterval: self.repeatInterval,
             repeatEnd: self.repeatEnd,
-            alarmSpecs: self.alarm)
+            alarmSpecs: self.alarm,
+            locationTitle: self.location,
+            latitude: self.latitude,
+            longitude: self.longitude,
+            radius: self.radius,
+            proximity: self.proximity)
 
         switch format {
         case .json:
@@ -377,6 +402,30 @@ private struct Edit: ParsableCommand {
         help: "Remove all alarms from the reminder")
     var clearAlarms = false
 
+    @Option(
+        help: "Location title for a location-based reminder")
+    var location: String?
+
+    @Option(
+        help: "Latitude for location-based reminder")
+    var latitude: Double?
+
+    @Option(
+        help: "Longitude for location-based reminder")
+    var longitude: Double?
+
+    @Option(
+        help: "Geofence radius in meters (default 100)")
+    var radius: Double?
+
+    @Option(
+        help: "Trigger on 'enter' or 'leave' (default 'enter')")
+    var proximity: String?
+
+    @Flag(
+        help: "Remove the location-based alarm from the reminder")
+    var clearLocation = false
+
     @Argument(
         parsing: .remaining,
         help: "The new reminder contents")
@@ -384,8 +433,8 @@ private struct Edit: ParsableCommand {
 
     func validate() throws {
         let hasTitle = !self.reminder.isEmpty
-        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil && self.repeat == nil && self.alarm.isEmpty && !self.clearAlarms {
-            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url, --repeat, --alarm, --clear-alarms)")
+        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil && self.repeat == nil && self.alarm.isEmpty && !self.clearAlarms && self.location == nil && !self.clearLocation {
+            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url, --repeat, --alarm, --clear-alarms, --location, --clear-location)")
         }
     }
 
@@ -409,7 +458,13 @@ private struct Edit: ParsableCommand {
             repeatInterval: self.repeatInterval,
             repeatEnd: self.repeatEnd,
             alarmSpecs: self.alarm,
-            clearAlarms: self.clearAlarms
+            clearAlarms: self.clearAlarms,
+            locationTitle: self.location,
+            latitude: self.latitude,
+            longitude: self.longitude,
+            radius: self.radius,
+            proximity: self.proximity,
+            clearLocation: self.clearLocation
         )
 
         switch format {

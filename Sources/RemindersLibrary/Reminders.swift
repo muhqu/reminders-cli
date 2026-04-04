@@ -1,4 +1,5 @@
 import ArgumentParser
+import CoreLocation
 import EventKit
 import Foundation
 
@@ -210,7 +211,13 @@ public final class Reminders {
         repeatInterval: Int? = nil,
         repeatEnd: DateComponents? = nil,
         alarmSpecs: [String] = [],
-        clearAlarms: Bool = false
+        clearAlarms: Bool = false,
+        locationTitle: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        radius: Double? = nil,
+        proximity: String? = nil,
+        clearLocation: Bool = false
     ) -> EKReminder {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
@@ -264,6 +271,25 @@ public final class Reminders {
                             reminder.addAlarm(alarm)
                         }
                     }
+                }
+                if clearLocation {
+                    // Remove location-based alarms
+                    for alarm in reminder.alarms ?? [] {
+                        if alarm.structuredLocation != nil {
+                            reminder.removeAlarm(alarm)
+                        }
+                    }
+                } else if let locationTitle = locationTitle, let lat = latitude, let lon = longitude {
+                    // Remove existing location alarms first
+                    for alarm in reminder.alarms ?? [] {
+                        if alarm.structuredLocation != nil {
+                            reminder.removeAlarm(alarm)
+                        }
+                    }
+                    let alarm = Self.makeLocationAlarm(
+                        title: locationTitle, latitude: lat, longitude: lon,
+                        radius: radius ?? 100, proximity: proximity ?? "enter")
+                    reminder.addAlarm(alarm)
                 }
                 try Store.save(reminder, commit: true)
                 result = reminder
@@ -346,7 +372,12 @@ public final class Reminders {
         repeatFrequency: String? = nil,
         repeatInterval: Int? = nil,
         repeatEnd: DateComponents? = nil,
-        alarmSpecs: [String] = []) -> EKReminder
+        alarmSpecs: [String] = [],
+        locationTitle: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        radius: Double? = nil,
+        proximity: String? = nil) -> EKReminder
     {
         let calendar = self.calendar(withName: name)
         let reminder = EKReminder(eventStore: Store)
@@ -370,6 +401,13 @@ public final class Reminders {
             if let rule = Self.makeRecurrenceRule(frequency: repeatFrequency, interval: repeatInterval ?? 1, endDate: repeatEnd) {
                 reminder.addRecurrenceRule(rule)
             }
+        }
+
+        if let locationTitle = locationTitle, let lat = latitude, let lon = longitude {
+            let alarm = Self.makeLocationAlarm(
+                title: locationTitle, latitude: lat, longitude: lon,
+                radius: radius ?? 100, proximity: proximity ?? "enter")
+            reminder.addAlarm(alarm)
         }
 
         do {
@@ -433,6 +471,18 @@ public final class Reminders {
 
         print("Warning: could not parse alarm spec '\(spec)'")
         return nil
+    }
+
+    // MARK: - Location helpers
+
+    private static func makeLocationAlarm(title: String, latitude: Double, longitude: Double, radius: Double, proximity: String) -> EKAlarm {
+        let structuredLocation = EKStructuredLocation(title: title)
+        structuredLocation.geoLocation = CLLocation(latitude: latitude, longitude: longitude)
+        structuredLocation.radius = radius
+        let alarm = EKAlarm()
+        alarm.structuredLocation = structuredLocation
+        alarm.proximity = proximity == "leave" ? .leave : .enter
+        return alarm
     }
 
     // MARK: - Recurrence helpers
