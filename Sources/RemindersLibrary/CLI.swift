@@ -12,7 +12,15 @@ private struct ShowLists: ParsableCommand {
     var format: OutputFormat = .plain
 
     func run() {
-        reminders.showLists(outputFormat: format)
+        let lists = reminders.getLists()
+        switch format {
+        case .json:
+            print(encodeToJson(data: lists))
+        case .plain:
+            for list in lists {
+                print(list.title)
+            }
+        }
     }
 }
 
@@ -54,9 +62,19 @@ private struct ShowAll: ParsableCommand {
             displayOptions = .all
         }
 
-        reminders.showAllReminders(
+        let items = reminders.getAllReminders(
             dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-            displayOptions: displayOptions, outputFormat: format)
+            displayOptions: displayOptions)
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: items))
+        case .plain:
+            for (i, reminder) in items.enumerated() {
+                let listName = reminder.calendar.title
+                print(RemindersLibrary.format(reminder, at: i, listName: listName))
+            }
+        }
     }
 }
 
@@ -85,8 +103,8 @@ private struct Show: ParsableCommand {
 
     @Option(
         name: [.customShort("o"), .long],
-        help: "How the sort order should be applied, one of: \(CustomSortOrder.commaSeparatedCases)")
-    var sortOrder: CustomSortOrder = .ascending
+        help: "How the sort order should be applied, one of: ascending, descending")
+    var sortOrder: SortOrder = .forward
 
     @Option(
         name: .shortAndLong,
@@ -113,9 +131,19 @@ private struct Show: ParsableCommand {
             displayOptions = .all
         }
 
-        reminders.showListItems(
+        let items = reminders.getListItems(
             withName: self.listName, dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-            displayOptions: displayOptions, outputFormat: format, sort: sort, sortOrder: sortOrder)
+            displayOptions: displayOptions, sort: sort, sortOrder: sortOrder)
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: items))
+        case .plain:
+            for (i, reminder) in items.enumerated() {
+                let index = sort == .none ? i : nil
+                print(RemindersLibrary.format(reminder, at: index))
+            }
+        }
     }
 }
 
@@ -153,14 +181,66 @@ private struct Add: ParsableCommand {
         help: "The notes to add to the reminder")
     var notes: String?
 
+    @Option(
+        help: "Recurrence frequency: daily, weekly, monthly, yearly, none")
+    var `repeat`: String?
+
+    @Option(
+        help: "Recurrence interval (default 1)")
+    var repeatInterval: Int?
+
+    @Option(
+        help: "End date for recurrence")
+    var repeatEnd: DateComponents?
+
+    @Option(
+        parsing: .singleValue,
+        help: "Alarm spec: date string for absolute, or -Nm/-Nh/-Nd for relative offset (repeatable)")
+    var alarm: [String] = []
+
+    @Option(
+        help: "Location title for a location-based reminder")
+    var location: String?
+
+    @Option(
+        help: "Latitude for location-based reminder")
+    var latitude: Double?
+
+    @Option(
+        help: "Longitude for location-based reminder")
+    var longitude: Double?
+
+    @Option(
+        help: "Geofence radius in meters (default 100)")
+    var radius: Double?
+
+    @Option(
+        help: "Trigger on 'enter' or 'leave' (default 'enter')")
+    var proximity: String?
+
     func run() {
-        reminders.addReminder(
+        let savedReminder = reminders.addReminder(
             string: self.reminder.joined(separator: " "),
             notes: self.notes,
             toListNamed: self.listName,
             dueDateComponents: self.dueDate,
             priority: priority,
-            outputFormat: format)
+            repeatFrequency: self.repeat,
+            repeatInterval: self.repeatInterval,
+            repeatEnd: self.repeatEnd,
+            alarmSpecs: self.alarm,
+            locationTitle: self.location,
+            latitude: self.latitude,
+            longitude: self.longitude,
+            radius: self.radius,
+            proximity: self.proximity)
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: savedReminder))
+        case .plain:
+            print("Added '\(savedReminder.title!)' to '\(savedReminder.calendar.title)'")
+        }
     }
 }
 
@@ -177,8 +257,19 @@ private struct Complete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName)
+        let reminder = reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName)
+        switch format {
+        case .json:
+            print(encodeToJson(data: reminder))
+        case .plain:
+            print("Completed '\(reminder.title!)'")
+        }
     }
 }
 
@@ -195,8 +286,19 @@ private struct Uncomplete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName)
+        let reminder = reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName)
+        switch format {
+        case .json:
+            print(encodeToJson(data: reminder))
+        case .plain:
+            print("Uncompleted '\(reminder.title!)'")
+        }
     }
 }
 
@@ -213,8 +315,25 @@ private struct Delete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.delete(itemAtIndex: self.index, onListNamed: self.listName)
+        let result = reminders.delete(itemAtIndex: self.index, onListNamed: self.listName)
+        switch format {
+        case .json:
+            let jsonResult: [String: String] = [
+                "id": result.id,
+                "externalId": result.externalId,
+                "title": result.title,
+                "status": "deleted"
+            ]
+            print(encodeToJson(data: jsonResult))
+        case .plain:
+            print("Deleted '\(result.title)'")
+        }
     }
 }
 
@@ -242,25 +361,118 @@ private struct Edit: ParsableCommand {
         help: "The notes to set on the reminder, overwriting previous notes")
     var notes: String?
 
+    @Option(
+        name: .shortAndLong,
+        help: "The date the reminder is due")
+    var dueDate: DateComponents?
+
+    @Option(
+        name: .shortAndLong,
+        help: "The priority of the reminder")
+    var priority: Priority?
+
+    @Option(
+        name: .shortAndLong,
+        help: "Move the reminder to a different list")
+    var list: String?
+
+    @Option(
+        name: .shortAndLong,
+        help: "Set/change the URL of the reminder")
+    var url: String?
+
+    @Option(
+        help: "Recurrence frequency: daily, weekly, monthly, yearly, none")
+    var `repeat`: String?
+
+    @Option(
+        help: "Recurrence interval (default 1)")
+    var repeatInterval: Int?
+
+    @Option(
+        help: "End date for recurrence")
+    var repeatEnd: DateComponents?
+
+    @Option(
+        parsing: .singleValue,
+        help: "Alarm spec: date string for absolute, or -Nm/-Nh/-Nd for relative offset (repeatable, replaces existing alarms)")
+    var alarm: [String] = []
+
+    @Flag(
+        help: "Remove all alarms from the reminder")
+    var clearAlarms = false
+
+    @Option(
+        help: "Location title for a location-based reminder")
+    var location: String?
+
+    @Option(
+        help: "Latitude for location-based reminder")
+    var latitude: Double?
+
+    @Option(
+        help: "Longitude for location-based reminder")
+    var longitude: Double?
+
+    @Option(
+        help: "Geofence radius in meters (default 100)")
+    var radius: Double?
+
+    @Option(
+        help: "Trigger on 'enter' or 'leave' (default 'enter')")
+    var proximity: String?
+
+    @Flag(
+        help: "Remove the location-based alarm from the reminder")
+    var clearLocation = false
+
     @Argument(
         parsing: .remaining,
         help: "The new reminder contents")
     var reminder: [String] = []
 
     func validate() throws {
-        if self.reminder.isEmpty && self.notes == nil {
-            throw ValidationError("Must specify either new reminder content or new notes")
+        let hasTitle = !self.reminder.isEmpty
+        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil && self.repeat == nil && self.alarm.isEmpty && !self.clearAlarms && self.location == nil && !self.clearLocation {
+            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url, --repeat, --alarm, --clear-alarms, --location, --clear-location)")
         }
     }
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
         let newText = self.reminder.joined(separator: " ")
-        reminders.edit(
+        let updatedReminder = reminders.edit(
             itemAtIndex: self.index,
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
-            newNotes: self.notes
+            newNotes: self.notes,
+            newDueDate: self.dueDate,
+            newPriority: self.priority,
+            newListName: self.list,
+            newURL: self.url,
+            repeatFrequency: self.repeat,
+            repeatInterval: self.repeatInterval,
+            repeatEnd: self.repeatEnd,
+            alarmSpecs: self.alarm,
+            clearAlarms: self.clearAlarms,
+            locationTitle: self.location,
+            latitude: self.latitude,
+            longitude: self.longitude,
+            radius: self.radius,
+            proximity: self.proximity,
+            clearLocation: self.clearLocation
         )
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: updatedReminder))
+        case .plain:
+            print("Updated reminder '\(updatedReminder.title!)'")
+        }
     }
 }
 
@@ -278,8 +490,91 @@ private struct NewList: ParsableCommand {
         help: "The name of the source of the list, if all your lists use the same source it will default to that")
     var source: String?
 
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.newList(with: self.listName, source: self.source)
+        let newList = reminders.newList(with: self.listName, source: self.source)
+        switch format {
+        case .json:
+            print(encodeToJson(data: newList))
+        case .plain:
+            print("Created new list '\(newList.title)'!")
+        }
+    }
+}
+
+private struct DeleteList: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Delete a list")
+
+    @Argument(
+        help: "The name of the list to delete",
+        completion: .custom(listNameCompletion))
+    var listName: String
+
+    @Flag(
+        help: "Confirm deletion (required for safety)")
+    var confirm = false
+
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
+    func validate() throws {
+        if !self.confirm {
+            throw ValidationError("Must pass --confirm to delete a list")
+        }
+    }
+
+    func run() {
+        let title = reminders.deleteList(named: self.listName)
+        switch format {
+        case .json:
+            let jsonResult: [String: String] = [
+                "title": title,
+                "status": "deleted"
+            ]
+            print(encodeToJson(data: jsonResult))
+        case .plain:
+            print("Deleted list '\(title)'")
+        }
+    }
+}
+
+private struct RenameList: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Rename a list")
+
+    @Argument(
+        help: "The current name of the list",
+        completion: .custom(listNameCompletion))
+    var listName: String
+
+    @Argument(
+        help: "The new name for the list")
+    var newName: String
+
+    @Option(
+        name: .shortAndLong,
+        help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
+    func run() {
+        let calendar = reminders.renameList(named: self.listName, newName: self.newName)
+        switch format {
+        case .json:
+            let jsonResult: [String: String] = [
+                "title": calendar.title,
+                "status": "renamed"
+            ]
+            print(encodeToJson(data: jsonResult))
+        case .plain:
+            print("Renamed list to '\(calendar.title)'")
+        }
     }
 }
 
@@ -292,7 +587,9 @@ public struct CLI: ParsableCommand {
             Complete.self,
             Uncomplete.self,
             Delete.self,
+            DeleteList.self,
             Edit.self,
+            RenameList.self,
             Show.self,
             ShowLists.self,
             NewList.self,
