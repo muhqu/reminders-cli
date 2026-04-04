@@ -67,18 +67,10 @@ public final class Reminders {
         let semaphore = DispatchSemaphore(value: 0)
         var grantedAccess = false
         var returnError: Error? = nil
-        if #available(macOS 14.0, *) {
-            Store.requestFullAccessToReminders { granted, error in
-                grantedAccess = granted
-                returnError = error
-                semaphore.signal()
-            }
-        } else {
-            Store.requestAccess(to: .reminder) { granted, error in
-                grantedAccess = granted
-                returnError = error
-                semaphore.signal()
-            }
+        Store.requestFullAccessToReminders { granted, error in
+            grantedAccess = granted
+            returnError = error
+            semaphore.signal()
         }
 
         semaphore.wait()
@@ -145,7 +137,7 @@ public final class Reminders {
     }
 
     func showListItems(withName name: String, dueOn dueDate: DateComponents?, includeOverdue: Bool,
-        displayOptions: DisplayOptions, outputFormat: OutputFormat, sort: Sort, sortOrder: CustomSortOrder)
+        displayOptions: DisplayOptions, outputFormat: OutputFormat, sort: Sort, sortOrder: SortOrder)
     {
         let semaphore = DispatchSemaphore(value: 0)
         let calendar = Calendar.current

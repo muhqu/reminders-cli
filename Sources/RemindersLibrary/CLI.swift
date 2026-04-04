@@ -85,8 +85,8 @@ private struct Show: ParsableCommand {
 
     @Option(
         name: [.customShort("o"), .long],
-        help: "How the sort order should be applied, one of: \(CustomSortOrder.commaSeparatedCases)")
-    var sortOrder: CustomSortOrder = .ascending
+        help: "How the sort order should be applied, one of: ascending, descending")
+    var sortOrder: SortOrder = .forward
 
     @Option(
         name: .shortAndLong,
