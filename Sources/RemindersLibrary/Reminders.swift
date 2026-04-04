@@ -208,7 +208,9 @@ public final class Reminders {
         newURL: String? = nil,
         repeatFrequency: String? = nil,
         repeatInterval: Int? = nil,
-        repeatEnd: DateComponents? = nil
+        repeatEnd: DateComponents? = nil,
+        alarmSpecs: [String] = [],
+        clearAlarms: Bool = false
     ) -> EKReminder {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
@@ -248,6 +250,18 @@ public final class Reminders {
                     if repeatFrequency != "none" {
                         if let rule = Self.makeRecurrenceRule(frequency: repeatFrequency, interval: repeatInterval ?? 1, endDate: repeatEnd) {
                             reminder.addRecurrenceRule(rule)
+                        }
+                    }
+                }
+                if clearAlarms || !alarmSpecs.isEmpty {
+                    // Remove existing alarms
+                    for alarm in reminder.alarms ?? [] {
+                        reminder.removeAlarm(alarm)
+                    }
+                    // Add new alarms if specs provided
+                    for spec in alarmSpecs {
+                        if let alarm = Self.parseAlarmSpec(spec) {
+                            reminder.addAlarm(alarm)
                         }
                     }
                 }
@@ -331,7 +345,8 @@ public final class Reminders {
         priority: Priority,
         repeatFrequency: String? = nil,
         repeatInterval: Int? = nil,
-        repeatEnd: DateComponents? = nil) -> EKReminder
+        repeatEnd: DateComponents? = nil,
+        alarmSpecs: [String] = []) -> EKReminder
     {
         let calendar = self.calendar(withName: name)
         let reminder = EKReminder(eventStore: Store)
@@ -340,7 +355,14 @@ public final class Reminders {
         reminder.notes = notes
         reminder.dueDateComponents = dueDateComponents
         reminder.priority = Int(priority.value.rawValue)
-        if let dueDate = dueDateComponents?.date, dueDateComponents?.hour != nil {
+
+        if !alarmSpecs.isEmpty {
+            for spec in alarmSpecs {
+                if let alarm = Self.parseAlarmSpec(spec) {
+                    reminder.addAlarm(alarm)
+                }
+            }
+        } else if let dueDate = dueDateComponents?.date, dueDateComponents?.hour != nil {
             reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
         }
 
@@ -381,6 +403,36 @@ public final class Reminders {
             print("Failed to rename list with error: \(error)")
             exit(1)
         }
+    }
+
+    // MARK: - Alarm helpers
+
+    static func parseAlarmSpec(_ spec: String) -> EKAlarm? {
+        // Check for relative offset: -Nm, -Nh, -Nd
+        let pattern = #"^-(\d+)([mhd])$"#
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: spec, range: NSRange(spec.startIndex..., in: spec)) {
+            let numberRange = Range(match.range(at: 1), in: spec)!
+            let unitRange = Range(match.range(at: 2), in: spec)!
+            let number = Double(spec[numberRange])!
+            let unit = spec[unitRange]
+            let seconds: Double
+            switch unit {
+            case "m": seconds = -number * 60
+            case "h": seconds = -number * 3600
+            case "d": seconds = -number * 86400
+            default: return nil
+            }
+            return EKAlarm(relativeOffset: seconds)
+        }
+
+        // Try parsing as a date string
+        if let dateComponents = DateComponents(argument: spec), let date = dateComponents.date {
+            return EKAlarm(absoluteDate: date)
+        }
+
+        print("Warning: could not parse alarm spec '\(spec)'")
+        return nil
     }
 
     // MARK: - Recurrence helpers

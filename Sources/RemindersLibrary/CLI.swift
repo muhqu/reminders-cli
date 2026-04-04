@@ -193,6 +193,11 @@ private struct Add: ParsableCommand {
         help: "End date for recurrence")
     var repeatEnd: DateComponents?
 
+    @Option(
+        parsing: .singleValue,
+        help: "Alarm spec: date string for absolute, or -Nm/-Nh/-Nd for relative offset (repeatable)")
+    var alarm: [String] = []
+
     func run() {
         let savedReminder = reminders.addReminder(
             string: self.reminder.joined(separator: " "),
@@ -202,7 +207,8 @@ private struct Add: ParsableCommand {
             priority: priority,
             repeatFrequency: self.repeat,
             repeatInterval: self.repeatInterval,
-            repeatEnd: self.repeatEnd)
+            repeatEnd: self.repeatEnd,
+            alarmSpecs: self.alarm)
 
         switch format {
         case .json:
@@ -362,6 +368,15 @@ private struct Edit: ParsableCommand {
         help: "End date for recurrence")
     var repeatEnd: DateComponents?
 
+    @Option(
+        parsing: .singleValue,
+        help: "Alarm spec: date string for absolute, or -Nm/-Nh/-Nd for relative offset (repeatable, replaces existing alarms)")
+    var alarm: [String] = []
+
+    @Flag(
+        help: "Remove all alarms from the reminder")
+    var clearAlarms = false
+
     @Argument(
         parsing: .remaining,
         help: "The new reminder contents")
@@ -369,8 +384,8 @@ private struct Edit: ParsableCommand {
 
     func validate() throws {
         let hasTitle = !self.reminder.isEmpty
-        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil && self.repeat == nil {
-            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url, --repeat)")
+        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil && self.repeat == nil && self.alarm.isEmpty && !self.clearAlarms {
+            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url, --repeat, --alarm, --clear-alarms)")
         }
     }
 
@@ -392,7 +407,9 @@ private struct Edit: ParsableCommand {
             newURL: self.url,
             repeatFrequency: self.repeat,
             repeatInterval: self.repeatInterval,
-            repeatEnd: self.repeatEnd
+            repeatEnd: self.repeatEnd,
+            alarmSpecs: self.alarm,
+            clearAlarms: self.clearAlarms
         )
 
         switch format {

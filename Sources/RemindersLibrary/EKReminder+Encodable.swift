@@ -9,8 +9,6 @@ extension EKReminder: @retroactive Encodable {
         case title
         case notes
         case url
-        case location
-        case locationTitle
         case completionDate
         case isCompleted
         case priority
@@ -18,6 +16,7 @@ extension EKReminder: @retroactive Encodable {
         case dueDate
         case list
         case recurrence
+        case alarms
     }
 
     private enum RecurrenceCodingKeys: String, CodingKey {
@@ -26,6 +25,16 @@ extension EKReminder: @retroactive Encodable {
         case end
         case count
         case daysOfWeek
+    }
+
+    private enum AlarmCodingKeys: String, CodingKey {
+        case type
+        case date
+        case offset
+        case locationTitle
+        case latitude
+        case longitude
+        case proximity
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -43,14 +52,33 @@ extension EKReminder: @retroactive Encodable {
         try container.encodeIfPresent(self.url, forKey: .url)
         try container.encodeIfPresent(format(self.completionDate), forKey: .completionDate)
 
-        for alarm in self.alarms ?? [] {
-            if let location = alarm.structuredLocation {
-                try container.encodeIfPresent(location.title, forKey: .locationTitle)
-                if let geoLocation = location.geoLocation {
-                    let geo = "\(geoLocation.coordinate.latitude), \(geoLocation.coordinate.longitude)"
-                    try container.encode(geo, forKey: .location)
+        if let alarms = self.alarms, !alarms.isEmpty {
+            var alarmsArray = container.nestedUnkeyedContainer(forKey: .alarms)
+            for alarm in alarms {
+                var alarmContainer = alarmsArray.nestedContainer(keyedBy: AlarmCodingKeys.self)
+                if let absoluteDate = alarm.absoluteDate {
+                    try alarmContainer.encode("absolute", forKey: .type)
+                    try alarmContainer.encode(format(absoluteDate), forKey: .date)
+                } else if alarm.relativeOffset != 0 {
+                    try alarmContainer.encode("relative", forKey: .type)
+                    try alarmContainer.encode(alarm.relativeOffset, forKey: .offset)
                 }
-                break
+                if let location = alarm.structuredLocation {
+                    try alarmContainer.encode("location", forKey: .type)
+                    try alarmContainer.encodeIfPresent(location.title, forKey: .locationTitle)
+                    if let geo = location.geoLocation {
+                        try alarmContainer.encode(geo.coordinate.latitude, forKey: .latitude)
+                        try alarmContainer.encode(geo.coordinate.longitude, forKey: .longitude)
+                    }
+                    let proximityString: String
+                    switch alarm.proximity {
+                    case .enter: proximityString = "enter"
+                    case .leave: proximityString = "leave"
+                    case .none: proximityString = "none"
+                    @unknown default: proximityString = "unknown"
+                    }
+                    try alarmContainer.encode(proximityString, forKey: .proximity)
+                }
             }
         }
 
