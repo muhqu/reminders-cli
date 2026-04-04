@@ -12,7 +12,15 @@ private struct ShowLists: ParsableCommand {
     var format: OutputFormat = .plain
 
     func run() {
-        reminders.showLists(outputFormat: format)
+        let lists = reminders.getLists()
+        switch format {
+        case .json:
+            print(encodeToJson(data: lists.map { $0.title }))
+        case .plain:
+            for list in lists {
+                print(list.title)
+            }
+        }
     }
 }
 
@@ -54,9 +62,19 @@ private struct ShowAll: ParsableCommand {
             displayOptions = .all
         }
 
-        reminders.showAllReminders(
+        let items = reminders.getAllReminders(
             dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-            displayOptions: displayOptions, outputFormat: format)
+            displayOptions: displayOptions)
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: items))
+        case .plain:
+            for (i, reminder) in items.enumerated() {
+                let listName = reminder.calendar.title
+                print(RemindersLibrary.format(reminder, at: i, listName: listName))
+            }
+        }
     }
 }
 
@@ -113,9 +131,19 @@ private struct Show: ParsableCommand {
             displayOptions = .all
         }
 
-        reminders.showListItems(
+        let items = reminders.getListItems(
             withName: self.listName, dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-            displayOptions: displayOptions, outputFormat: format, sort: sort, sortOrder: sortOrder)
+            displayOptions: displayOptions, sort: sort, sortOrder: sortOrder)
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: items))
+        case .plain:
+            for (i, reminder) in items.enumerated() {
+                let index = sort == .none ? i : nil
+                print(RemindersLibrary.format(reminder, at: index))
+            }
+        }
     }
 }
 
@@ -154,13 +182,19 @@ private struct Add: ParsableCommand {
     var notes: String?
 
     func run() {
-        reminders.addReminder(
+        let savedReminder = reminders.addReminder(
             string: self.reminder.joined(separator: " "),
             notes: self.notes,
             toListNamed: self.listName,
             dueDateComponents: self.dueDate,
-            priority: priority,
-            outputFormat: format)
+            priority: priority)
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: savedReminder))
+        case .plain:
+            print("Added '\(savedReminder.title!)' to '\(savedReminder.calendar.title)'")
+        }
     }
 }
 
@@ -183,7 +217,13 @@ private struct Complete: ParsableCommand {
     var format: OutputFormat = .plain
 
     func run() {
-        reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName, outputFormat: format)
+        let reminder = reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName)
+        switch format {
+        case .json:
+            print(encodeToJson(data: reminder))
+        case .plain:
+            print("Completed '\(reminder.title!)'")
+        }
     }
 }
 
@@ -206,7 +246,13 @@ private struct Uncomplete: ParsableCommand {
     var format: OutputFormat = .plain
 
     func run() {
-        reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName, outputFormat: format)
+        let reminder = reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName)
+        switch format {
+        case .json:
+            print(encodeToJson(data: reminder))
+        case .plain:
+            print("Uncompleted '\(reminder.title!)'")
+        }
     }
 }
 
@@ -229,7 +275,19 @@ private struct Delete: ParsableCommand {
     var format: OutputFormat = .plain
 
     func run() {
-        reminders.delete(itemAtIndex: self.index, onListNamed: self.listName, outputFormat: format)
+        let result = reminders.delete(itemAtIndex: self.index, onListNamed: self.listName)
+        switch format {
+        case .json:
+            let jsonResult: [String: String] = [
+                "id": result.id,
+                "externalId": result.externalId,
+                "title": result.title,
+                "status": "deleted"
+            ]
+            print(encodeToJson(data: jsonResult))
+        case .plain:
+            print("Deleted '\(result.title)'")
+        }
     }
 }
 
@@ -275,13 +333,19 @@ private struct Edit: ParsableCommand {
 
     func run() {
         let newText = self.reminder.joined(separator: " ")
-        reminders.edit(
+        let updatedReminder = reminders.edit(
             itemAtIndex: self.index,
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
-            newNotes: self.notes,
-            outputFormat: format
+            newNotes: self.notes
         )
+
+        switch format {
+        case .json:
+            print(encodeToJson(data: updatedReminder))
+        case .plain:
+            print("Updated reminder '\(updatedReminder.title!)'")
+        }
     }
 }
 
@@ -300,7 +364,8 @@ private struct NewList: ParsableCommand {
     var source: String?
 
     func run() {
-        reminders.newList(with: self.listName, source: self.source)
+        let newList = reminders.newList(with: self.listName, source: self.source)
+        print("Created new list '\(newList.title)'!")
     }
 }
 
