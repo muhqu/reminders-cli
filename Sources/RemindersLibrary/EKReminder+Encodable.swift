@@ -2,6 +2,7 @@ import EventKit
 
 extension EKReminder: @retroactive Encodable {
     private enum EncodingKeys: String, CodingKey {
+        case id
         case externalId
         case lastModified
         case creationDate
@@ -20,6 +21,7 @@ extension EKReminder: @retroactive Encodable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: EncodingKeys.self)
+        try container.encode(self.calendarItemIdentifier, forKey: .id)
         try container.encode(self.calendarItemExternalIdentifier, forKey: .externalId)
         try container.encode(self.title, forKey: .title)
         try container.encode(self.isCompleted, forKey: .isCompleted)
