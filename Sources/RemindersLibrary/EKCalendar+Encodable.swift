@@ -16,19 +16,21 @@ extension EKCalendar: @retroactive Encodable {
             let b = Int(components[2] * 255)
             try container.encode(String(format: "#%02X%02X%02X", r, g, b), forKey: .color)
         }
-        try container.encode(self.source.title, forKey: .source)
+        try container.encodeIfPresent(self.source?.title, forKey: .source)
         // sourceType as string
-        let sourceTypeString: String
-        switch self.source.sourceType {
-        case .local: sourceTypeString = "local"
-        case .exchange: sourceTypeString = "exchange"
-        case .calDAV: sourceTypeString = "calDAV"
-        case .mobileMe: sourceTypeString = "mobileMe"
-        case .subscribed: sourceTypeString = "subscribed"
-        case .birthdays: sourceTypeString = "birthdays"
-        @unknown default: sourceTypeString = "unknown"
+        if let source = self.source {
+            let sourceTypeString: String
+            switch source.sourceType {
+            case .local: sourceTypeString = "local"
+            case .exchange: sourceTypeString = "exchange"
+            case .calDAV: sourceTypeString = "calDAV"
+            case .mobileMe: sourceTypeString = "mobileMe"
+            case .subscribed: sourceTypeString = "subscribed"
+            case .birthdays: sourceTypeString = "birthdays"
+            @unknown default: sourceTypeString = "unknown"
+            }
+            try container.encode(sourceTypeString, forKey: .sourceType)
         }
-        try container.encode(sourceTypeString, forKey: .sourceType)
         try container.encode(self.allowsContentModifications, forKey: .allowsModification)
         try container.encode(self.isImmutable, forKey: .isImmutable)
     }
