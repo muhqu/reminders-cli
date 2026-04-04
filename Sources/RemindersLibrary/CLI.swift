@@ -315,14 +315,35 @@ private struct Edit: ParsableCommand {
         help: "The notes to set on the reminder, overwriting previous notes")
     var notes: String?
 
+    @Option(
+        name: .shortAndLong,
+        help: "The date the reminder is due")
+    var dueDate: DateComponents?
+
+    @Option(
+        name: .shortAndLong,
+        help: "The priority of the reminder")
+    var priority: Priority?
+
+    @Option(
+        name: .shortAndLong,
+        help: "Move the reminder to a different list")
+    var list: String?
+
+    @Option(
+        name: .shortAndLong,
+        help: "Set/change the URL of the reminder")
+    var url: String?
+
     @Argument(
         parsing: .remaining,
         help: "The new reminder contents")
     var reminder: [String] = []
 
     func validate() throws {
-        if self.reminder.isEmpty && self.notes == nil {
-            throw ValidationError("Must specify either new reminder content or new notes")
+        let hasTitle = !self.reminder.isEmpty
+        if !hasTitle && self.notes == nil && self.dueDate == nil && self.priority == nil && self.list == nil && self.url == nil {
+            throw ValidationError("Must specify at least one option to edit (title, --notes, --due-date, --priority, --list, --url)")
         }
     }
 
@@ -337,7 +358,11 @@ private struct Edit: ParsableCommand {
             itemAtIndex: self.index,
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
-            newNotes: self.notes
+            newNotes: self.notes,
+            newDueDate: self.dueDate,
+            newPriority: self.priority,
+            newListName: self.list,
+            newURL: self.url
         )
 
         switch format {

@@ -197,7 +197,16 @@ public final class Reminders {
         }
     }
 
-    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?) -> EKReminder {
+    func edit(
+        itemAtIndex index: String,
+        onListNamed name: String,
+        newText: String?,
+        newNotes: String?,
+        newDueDate: DateComponents? = nil,
+        newPriority: Priority? = nil,
+        newListName: String? = nil,
+        newURL: String? = nil
+    ) -> EKReminder {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
         var result: EKReminder!
@@ -209,8 +218,24 @@ public final class Reminders {
             }
 
             do {
-                reminder.title = newText ?? reminder.title
-                reminder.notes = newNotes ?? reminder.notes
+                if let newText = newText {
+                    reminder.title = newText
+                }
+                if let newNotes = newNotes {
+                    reminder.notes = newNotes
+                }
+                if let newDueDate = newDueDate {
+                    reminder.dueDateComponents = newDueDate
+                }
+                if let newPriority = newPriority {
+                    reminder.priority = Int(newPriority.value.rawValue)
+                }
+                if let newListName = newListName {
+                    reminder.calendar = self.calendar(withName: newListName)
+                }
+                if let newURL = newURL {
+                    reminder.url = URL(string: newURL)
+                }
                 try Store.save(reminder, commit: true)
                 result = reminder
             } catch let error {
