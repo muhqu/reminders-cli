@@ -635,6 +635,7 @@ public struct CLI: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "reminders",
         abstract: "Interact with macOS Reminders from the command line",
+        version: remindersVersion,
         subcommands: [
             Add.self,
             Complete.self,
