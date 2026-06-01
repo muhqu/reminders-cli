@@ -2,6 +2,28 @@
 
 A simple CLI for interacting with OS X reminders.
 
+## Access control
+
+To limit the blast radius, this CLI can access **no** reminder lists by default.
+You grant access in a config file at `~/.config/reminders-cli.yml` (override the
+path with `REMINDERS_CLI_CONFIG`, or it honors `XDG_CONFIG_HOME`).
+
+```yaml
+# ~/.config/reminders-cli.yml
+full_access: false        # set true to allow every list (disables the allowlist)
+allowed_lists:            # exact names or case-insensitive glob patterns
+  - "Work"
+  - "Personal*"
+```
+
+Run `reminders init-config` to write a starter file pre-filled with your existing
+list names as commented examples. Until a config grants a list, every read and
+write to it is refused. Use `reminders show-lists --all` to see all lists (with an
+`[allowed]` marker) when deciding what to add.
+
+Note: macOS reminders permission is all-or-nothing at the OS level, so this
+allowlist is a guardrail on what *this tool* will touch — not an OS sandbox.
+
 ## Usage:
 
 #### Show all lists

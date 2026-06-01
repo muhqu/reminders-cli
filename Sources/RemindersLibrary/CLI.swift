@@ -3,15 +3,37 @@ import Foundation
 
 private let reminders = Reminders()
 
+private struct ListAccessEntry: Encodable {
+    let title: String
+    let allowed: Bool
+}
+
 private struct ShowLists: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Print the name of lists to pass to other commands")
+
+    @Flag(help: "Show all lists, including those not granted by your config")
+    var all = false
+
     @Option(
         name: .shortAndLong,
         help: "format, either of 'plain' or 'json'")
     var format: OutputFormat = .plain
 
     func run() {
+        if all {
+            let report = reminders.listAccessReport()
+            switch format {
+            case .json:
+                print(encodeToJson(data: report.map { ListAccessEntry(title: $0.name, allowed: $0.allowed) }))
+            case .plain:
+                for entry in report {
+                    print(entry.allowed ? "\(entry.name) [allowed]" : entry.name)
+                }
+            }
+            return
+        }
+
         let lists = reminders.getLists()
         switch format {
         case .json:
@@ -578,6 +600,37 @@ private struct RenameList: ParsableCommand {
     }
 }
 
+private struct InitConfig: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "init-config",
+        abstract: "Create a starter access-control config at ~/.config/reminders-cli.yml")
+
+    @Flag(help: "Overwrite an existing config file")
+    var force = false
+
+    func run() throws {
+        let url = configURL()
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) && !self.force {
+            print("Config already exists at \(url.path) (use --force to overwrite)")
+            throw ExitCode.failure
+        }
+
+        let template = configTemplate(listNames: reminders.enumerateAllListNames())
+        do {
+            try fileManager.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try template.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            print("Failed to write config: \(error.localizedDescription)")
+            throw ExitCode.failure
+        }
+
+        print("Wrote \(url.path)")
+        print("Edit it to allow the lists you want, then re-run your command.")
+    }
+}
+
 public struct CLI: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "reminders",
@@ -594,6 +647,7 @@ public struct CLI: ParsableCommand {
             ShowLists.self,
             NewList.self,
             ShowAll.self,
+            InitConfig.self,
         ]
     )
 
