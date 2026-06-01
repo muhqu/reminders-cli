@@ -1,0 +1,78 @@
+name: Release
+
+"on":
+  push:
+    tags: ['*.*.*']           # matches the existing tag style, e.g. 2.5.2
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 2.5.2'
+        required: true
+
+# Don't cancel a release that is mid-publish.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Creating a release (and, on manual dispatch, the tag) requires write access.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
+
+      - name: xcode-select
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Stamp version into source
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: printf 'let remindersVersion = "%s"\n' "$VERSION" > Sources/RemindersLibrary/Version.swift
+
+      - name: Build release package
+        run: make package
+
+      - name: Compute checksum
+        id: shasum
+        run: |
+          SHA=$(shasum -a 256 reminders.tar.gz | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "SHA-256: $SHA"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA256: ${{ steps.shasum.outputs.sha256 }}
+        run: |
+          {
+            echo '## Install'
+            echo
+            echo 'Download `reminders.tar.gz` below, then:'
+            echo
+            echo '```'
+            echo 'tar -zxvf reminders.tar.gz'
+            echo 'mv reminders /usr/local/bin'
+            echo 'rm reminders.tar.gz'
+            echo '```'
+            echo
+            echo "**SHA-256:** \`$SHA256\`"
+          } > release-notes.md
+          gh release create "$VERSION" reminders.tar.gz \
+            --title "$VERSION" \
+            --target "$GITHUB_SHA" \
+            --notes-file release-notes.md
