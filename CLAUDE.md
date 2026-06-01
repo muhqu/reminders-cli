@@ -39,6 +39,10 @@ Three layers, sharing the `RemindersLibrary` module:
 - **List lookup:** `calendar(withName:)` matches list titles **case-insensitively** and `exit(1)`s if not found. `getCalendars()` filters to lists where `allowsContentModifications` is true.
 - **Error handling:** library methods print an error and `exit(1)` on failure (list not found, save failed, etc.) rather than throwing to the caller. Argument-level validation uses ArgumentParser's `validate()` throwing `ValidationError`.
 
+### Access control (allowlist)
+
+By default the CLI can access **no** lists; users grant access via `~/.config/reminders-cli.yml` (`Config.swift` — parsed with Yams; `REMINDERS_CLI_CONFIG` / `XDG_CONFIG_HOME` aware). Enforcement is centralized: `getCalendars()` filters to allowlisted lists via `requireAccessPolicy()`, so **every** read/write path is gated automatically (they all route through `getCalendars()` / `calendar(withName:)`). The exceptions, which guard themselves explicitly, are `newList()` (uses its own `EKEventStore`, so it can't rely on the `getCalendars()` filter) and `renameList()` (the new name must also be allowed). Discovery that must work *without* a config (`enumerateAllListNames()`, `listAccessReport()` for `show-lists --all`, the `init-config` command) uses `allCalendars()` (unfiltered) and must **not** call `requireAccessPolicy()`. Glob matching (`AccessPolicy.glob`) is `fnmatch` with `FNM_CASEFOLD`. Add allowlist/parsing tests to `AccessPolicyTests`/`ConfigTests` (pure logic, no EventKit).
+
 ### Natural-language dates
 
 `DateComponents` conforms to `ExpressibleByArgument` in `NaturalLanguage.swift` (via `NSDataDetector`), so every date option (`--due-date`, `--repeat-end`, absolute `--alarm` specs) accepts strings like `today`, `tomorrow 9am`, `next monday`, `2025-02-16`. It detects time-significance and strips time components when the input has no time — which determines whether a due-date alarm is added. This is the most heavily tested code (`Tests/RemindersTests/NaturalLanguageTests.swift`); changes here need matching tests.

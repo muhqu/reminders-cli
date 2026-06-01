@@ -64,6 +64,29 @@ public enum Priority: String, ExpressibleByArgument {
 }
 
 public final class Reminders {
+    private let configState: ConfigState
+
+    public init() {
+        self.configState = loadConfigState()
+    }
+
+    /// Returns the access policy, or prints guidance and exits if the config is
+    /// missing or invalid. Gates every read/write path via `getCalendars()`.
+    private func requireAccessPolicy() -> AccessPolicy {
+        switch self.configState {
+        case .loaded(let config):
+            return AccessPolicy(config)
+        case .missing(let url):
+            print(missingConfigMessage(path: url))
+            exit(1)
+        case .invalid(let url, let error):
+            print("error: failed to parse config at \(url.path):")
+            print("  \(error)")
+            print("Fix the file, or recreate it with: reminders init-config --force")
+            exit(1)
+        }
+    }
+
     public static func requestAccess() -> (Bool, Error?) {
         let semaphore = DispatchSemaphore(value: 0)
         var grantedAccess = false
@@ -84,6 +107,24 @@ public final class Reminders {
 
     func getLists() -> [EKCalendar] {
         return self.getCalendars()
+    }
+
+    /// Every modifiable list name, ignoring the allowlist. For discovery only.
+    func enumerateAllListNames() -> [String] {
+        return self.allCalendars().map { $0.title }
+    }
+
+    /// Every modifiable list with whether the current config grants access to it.
+    /// Does not require a config (treats all as denied when missing/invalid), so it
+    /// stays usable for discovery before a config exists.
+    func listAccessReport() -> [(name: String, allowed: Bool)] {
+        let policy: AccessPolicy?
+        if case .loaded(let config) = self.configState {
+            policy = AccessPolicy(config)
+        } else {
+            policy = nil
+        }
+        return self.allCalendars().map { ($0.title, policy?.allows($0.title) ?? false) }
     }
 
     func getAllReminders(dueOn dueDate: DateComponents?, includeOverdue: Bool,
@@ -158,6 +199,11 @@ public final class Reminders {
     }
 
     func newList(with name: String, source requestedSourceName: String?) -> EKCalendar {
+        guard self.requireAccessPolicy().allows(name) else {
+            print("Cannot create list '\(name)': it is not permitted by your config.")
+            print("Add a matching entry to \(configURL().path) (or set full_access: true).")
+            exit(1)
+        }
         let store = EKEventStore()
         let sources = store.sources
         guard var source = sources.first else {
@@ -433,6 +479,11 @@ public final class Reminders {
 
     func renameList(named name: String, newName: String) -> EKCalendar {
         let calendar = self.calendar(withName: name)
+        guard self.requireAccessPolicy().allows(newName) else {
+            print("Cannot rename to '\(newName)': it is not permitted by your config.")
+            print("Add a matching entry to \(configURL().path) (or set full_access: true).")
+            exit(1)
+        }
         calendar.title = newName
         do {
             try Store.saveCalendar(calendar, commit: true)
@@ -533,17 +584,29 @@ public final class Reminders {
     }
 
     private func calendar(withName name: String) -> EKCalendar {
-        if let calendar = self.getCalendars().find(where: { $0.title.lowercased() == name.lowercased() }) {
-            return calendar
-        } else {
+        let policy = self.requireAccessPolicy()
+        guard let calendar = self.allCalendars().find(where: { $0.title.lowercased() == name.lowercased() }) else {
             print("No reminders list matching \(name)")
             exit(1)
         }
+        guard policy.allows(calendar.title) else {
+            print("Access to list '\(calendar.title)' is not granted by your config.")
+            print("Allow it in \(configURL().path), or run: reminders show-lists --all")
+            exit(1)
+        }
+        return calendar
+    }
+
+    /// All modifiable reminder lists, with no allowlist filtering applied. Used for
+    /// discovery (`init-config`, `show-lists --all`, and the missing-config message).
+    private func allCalendars() -> [EKCalendar] {
+        return Store.calendars(for: .reminder)
+                    .filter { $0.allowsContentModifications }
     }
 
     private func getCalendars() -> [EKCalendar] {
-        return Store.calendars(for: .reminder)
-                    .filter { $0.allowsContentModifications }
+        let policy = self.requireAccessPolicy()
+        return self.allCalendars().filter { policy.allows($0.title) }
     }
 
     private func getReminder(from reminders: [EKReminder], at index: String) -> EKReminder? {
