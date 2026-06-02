@@ -1,12 +1,14 @@
 PREFIX ?= $(HOME)/.local
 EXECUTABLE = reminders
-RELEASE_BUILD = .build/release
+# Universal (arm64 + x86_64) build. Passing --arch routes through xcodebuild,
+# which writes to .build/apple/Products/Release/ rather than .build/release/.
+RELEASE_BUILD = .build/apple/Products/Release
 ARCHIVE = $(EXECUTABLE).tar.gz
 
 .PHONY: build install uninstall clean package
 
 build:
-	swift build -c release
+	swift build -c release --arch arm64 --arch x86_64
 
 install: build
 	install -d $(PREFIX)/bin
