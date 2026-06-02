@@ -1,0 +1,8 @@
+{
+  "name": "reminders",
+  "description": "Create and manage Apple/iCloud Reminders via the reminders CLI",
+  "version": "0.1.0",
+  "author": { "name": "Mathias Leppich" },
+  "homepage": "https://github.com/muhqu/reminders-cli",
+  "license": "MIT"
+}

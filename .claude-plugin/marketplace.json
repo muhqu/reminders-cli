@@ -1,0 +1,11 @@
+{
+  "name": "reminders-cli",
+  "owner": { "name": "Mathias Leppich" },
+  "plugins": [
+    {
+      "name": "reminders",
+      "source": "./claude-plugin",
+      "description": "Create and manage Apple/iCloud Reminders from Claude Code"
+    }
+  ]
+}

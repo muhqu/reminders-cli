@@ -145,3 +145,17 @@ $ cd reminders-cli
 $ make build
 $ cp .build/apple/Products/Release/reminders /usr/local/bin/reminders
 ```
+
+## Claude Code plugin
+
+This repo also ships a [Claude Code](https://claude.com/claude-code) plugin (in
+[`claude-plugin/`](claude-plugin/)) that lets Claude create and manage Apple/iCloud Reminders for
+you — e.g. *"remind me next Monday to run this script again"* files a reminder on a dedicated
+`Claude` list, capturing the workspace and the command to re-run.
+
+```
+/plugin marketplace add muhqu/reminders-cli
+/plugin install reminders@reminders-cli
+```
+
+See [`claude-plugin/README.md`](claude-plugin/README.md) for prerequisites and usage.
