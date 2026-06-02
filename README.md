@@ -121,13 +121,13 @@ $ reminders show -h
 #### With [Homebrew](http://brew.sh/)
 
 ```
-$ brew install keith/formulae/reminders-cli
+$ brew install muhqu/tap/reminders-cli
 ```
 
 #### From GitHub releases
 
 Download the latest release from
-[here](https://github.com/keith/reminders-cli/releases)
+[here](https://github.com/muhqu/reminders-cli/releases)
 
 ```
 $ tar -zxvf reminders.tar.gz
@@ -137,10 +137,11 @@ $ rm reminders.tar.gz
 
 #### Building manually
 
-This requires a recent Xcode installation.
+This requires a full Xcode installation (the release build is a universal
+arm64 + x86_64 binary, which needs `xcodebuild`).
 
 ```
 $ cd reminders-cli
-$ make build-release
+$ make build
 $ cp .build/apple/Products/Release/reminders /usr/local/bin/reminders
 ```

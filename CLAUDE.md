@@ -8,8 +8,8 @@ A macOS command-line tool for reading and mutating Apple Reminders, built on Eve
 
 ## Commands
 
-- **Build (debug):** `swift build` — **Release:** `make build` (alias for `swift build -c release`)
-- **Run during dev:** `swift run reminders <args>` or `.build/release/reminders <args>`
+- **Build (debug):** `swift build` — **Release:** `make build` (universal arm64 + x86_64 via `swift build -c release --arch arm64 --arch x86_64`; routes through `xcodebuild`, so a **full Xcode** is required, and output lands in `.build/apple/Products/Release/`, not `.build/release/`)
+- **Run during dev:** `swift run reminders <args>` or `.build/debug/reminders <args>`
 - **Test:** `swift test`
 - **Single test:** `swift test --filter NaturalLanguageTests/testTomorrow` (class/method) or `--filter testTomorrow`
 - **Install / uninstall:** `make install` / `make uninstall` (installs to `$PREFIX/bin`, `PREFIX` defaults to `~/.local`)
@@ -51,6 +51,8 @@ By default the CLI can access **no** lists; users grant access via `~/.config/re
 
 JSON comes from `@retroactive Encodable` conformances on EventKit types in `EKReminder+Encodable.swift` and `EKCalendar+Encodable.swift`, serialized by `encodeToJson` (pretty-printed, sorted keys). **To add or change a field in JSON output, edit these extension files** — the CLI just calls `encodeToJson(data:)`.
 
-## Note
+## Distribution
 
-The README's "Building manually" section is stale — it references the old `make build-release` target and `.build/apple/Products/Release/` path. The current Makefile uses `make build` and `.build/release/`.
+Installed via Homebrew from a custom tap: `brew install muhqu/tap/reminders-cli` (tap repo: `muhqu/homebrew-tap`, formula `Formula/reminders-cli.rb`). The formula installs a **prebuilt universal binary** from the GitHub release asset (`reminders.tar.gz`, containing `reminders` + the `_reminders` zsh completion) — it does not build from source.
+
+Releases are cut by `.github/workflows/release.yml` (tag push `*.*.*` or manual dispatch): it stamps `Sources/RemindersLibrary/Version.swift`, runs `make package`, and publishes the tarball + sha256 as a GitHub release. After a release, the tap formula's `url` + `sha256` must be bumped to point at the new asset (manual today; could be automated in `release.yml` with a cross-repo push token).
