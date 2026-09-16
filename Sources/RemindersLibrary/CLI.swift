@@ -178,7 +178,7 @@ private struct Show: ParsableCommand {
             print(encodeToJson(data: items))
         case .plain:
             for (i, reminder) in items.enumerated() {
-                let index = sort == .none ? i : nil
+                let index = sort == .none && self.metadata.isEmpty ? i : nil
                 print(RemindersLibrary.format(
                     reminder, at: index, includeNotes: !self.hideNotes))
             }

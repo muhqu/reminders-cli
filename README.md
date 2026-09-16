@@ -118,10 +118,12 @@ repeatable `--metadata KEY=VALUE` options for exact OR matching, and
 ```
 $ reminders show Claude --metadata "workspace=/Users/me/repos/acme/api" \
     --metadata "repo-id=github.com/acme/api" --hide-notes
-0: Review the release checklist (in 2 hours)
+Review the release checklist (in 2 hours)
 ```
 
-Legacy `[claude-meta]` blocks are also supported.
+Legacy `[claude-meta]` blocks are also supported. Metadata-filtered plain output
+omits positional indexes because those indexes would not safely identify items
+in the unfiltered list; use JSON `externalId` values for follow-up mutations.
 
 #### See help for more examples
 

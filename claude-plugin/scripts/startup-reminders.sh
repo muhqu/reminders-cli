@@ -41,8 +41,7 @@ normalize_repo() {
     path=${path%/}
     path=${path%.git}
     [ -n "$host" ] && [ -n "$path" ] || return
-    host=$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')
-    printf '%s/%s\n' "$host" "$path"
+    printf '%s/%s\n' "$host" "$path" | tr '[:upper:]' '[:lower:]'
 }
 
 case "$reminders_bin" in

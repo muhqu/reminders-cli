@@ -1,1 +1,1 @@
-0: Re-run the repository release check (2 hours ago)
+Re-run the repository release check (2 hours ago)

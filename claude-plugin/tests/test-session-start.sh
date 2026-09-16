@@ -43,16 +43,16 @@ mkdir -p "$workspace_dir"
 workspace_result=$(run_lookup workspace "$workspace_dir")
 assert_equal "workspace match" "ok
 Project reminders due today or overdue:
-0: Review \"workspace\" path C:\\tmp (today)" "$workspace_result"
+Review \"workspace\" path C:\\tmp (today)" "$workspace_result"
 
 repo_dir="$temp_dir/repository"
 mkdir -p "$repo_dir"
-MOCK_REPO=git@github.com:example/project.git
+MOCK_REPO=git@GitHub.com:Example/Project.git
 MOCK_GIT_BIN=$mock_git
 repo_result=$(MOCK_REPO="$MOCK_REPO" MOCK_GIT_BIN="$MOCK_GIT_BIN" run_lookup repo "$repo_dir")
 assert_equal "repository fallback" "ok
 Project reminders due today or overdue:
-0: Re-run the repository release check (2 hours ago)" "$repo_result"
+Re-run the repository release check (2 hours ago)" "$repo_result"
 
 no_matches_result=$(run_lookup no-matches "$workspace_dir")
 assert_equal "no matches" "none" "$no_matches_result"
@@ -75,7 +75,7 @@ claude_message=$(printf '%s' "$claude_output" | \
     /usr/bin/plutil -extract systemMessage raw -o - - 2>/dev/null) ||
     fail "Claude adapter did not emit systemMessage JSON"
 assert_equal "Claude adapter message" "Project reminders due today or overdue:
-0: Review \"workspace\" path C:\\tmp (today)" "$claude_message"
+Review \"workspace\" path C:\\tmp (today)" "$claude_message"
 
 copilot_output=$(printf '%s' "$hook_input" | \
     MOCK_SCENARIO=workspace MOCK_WORKSPACE="$workspace_dir" MOCK_FIXTURES="$fixtures" \
@@ -89,7 +89,7 @@ copilot_message=$(printf '%s' "$copilot_output" | \
     fail "Copilot adapter progress message is invalid"
 assert_equal "Copilot adapter type" "progress" "$copilot_type"
 assert_equal "Copilot adapter message" "Project reminders due today or overdue:
-0: Review \"workspace\" path C:\\tmp (today)" "$copilot_message"
+Review \"workspace\" path C:\\tmp (today)" "$copilot_message"
 
 silent_output=$(printf '%s' "$hook_input" | \
     MOCK_SCENARIO=no-matches MOCK_WORKSPACE="$workspace_dir" MOCK_FIXTURES="$fixtures" \
