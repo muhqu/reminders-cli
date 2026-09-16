@@ -1,14 +1,10 @@
 ---
 name: list-reminders
 description: >-
-  Show or read back the user's Apple/iCloud Reminders created via Claude — e.g. "what reminders
+  Show or read back the user's Apple/iCloud Reminders created by a coding agent — e.g. "what reminders
   do I have", "show my reminders for this project", "what's due today". Can filter to the current
   workspace/repo and complete, snooze, or re-run them.
 argument-hint: "[optional filter, e.g. 'this repo' or 'today']"
-allowed-tools:
-  - "Bash(reminders:*)"
-  - "Bash(git remote:*)"
-  - "Bash(pwd)"
 ---
 
 # List reminders
@@ -22,15 +18,31 @@ reminders show "Claude" --format json
 Use `reminders show-all --format json` if the user wants reminders across all (allowlisted) lists.
 Add `--include-completed` only if they ask to see completed ones.
 
-## Parse & filter
-Each JSON item has `title`, `dueDate` (ISO-8601), `isCompleted`, `externalId`, and `notes`. The
-notes may contain a `[claude-meta]` block (spec: `${CLAUDE_PLUGIN_ROOT}/reference/metadata-format.md`)
-with `workspace`, `repo`, `branch`, `command`, etc.
+For **this project/repository**, gather the physical current directory with `pwd -P` and the origin
+URL with `git remote get-url origin` when available. Also derive `repo-id` by converting an
+SSH/HTTPS origin to lowercase host plus path and removing any user, scheme, trailing slash, and
+`.git` suffix. Delegate filtering to the CLI using repeatable `--metadata` options, which have OR
+semantics:
 
-- If the user scopes to **"this project / repo"**, keep only items whose `[claude-meta]`
-  `workspace` equals the current directory (`pwd`), or whose `repo` matches
-  `git remote get-url origin`.
-- If they scope by time ("today", "overdue", "this week"), filter on `dueDate`.
+```bash
+reminders show "Claude" --metadata "workspace=<exact-directory>" \
+  --metadata "repo=<origin-url>" --metadata "repo-id=<normalized-origin>" --format json
+```
+
+Omit repository criteria outside a repository. Legacy reminders generally match the raw `repo`;
+new reminders also match `repo-id` if the checkout's remote changes between SSH and HTTPS. Never
+filter by branch. For date scopes, use the CLI's existing date options rather than filtering JSON
+in the model. For example:
+
+```bash
+reminders show "Claude" --due-date today --include-overdue --format json
+```
+
+## Parse
+Each JSON item has `title`, `dueDate` (ISO-8601), `isCompleted`, `externalId`, and `notes`. The
+notes may contain an `[agent-meta]` block or a legacy `[claude-meta]` block, as documented in this
+plugin's `reference/metadata-format.md`. Both markers carry the same keys. Branch metadata is
+historical context only and must not affect project filtering.
 
 ## Present
 List each matching reminder with its title, a human-friendly due date, and the useful metadata —

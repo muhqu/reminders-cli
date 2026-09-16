@@ -3,15 +3,9 @@ name: create-reminder
 description: >-
   Create an Apple/iCloud Reminder when the user asks to be reminded of something — e.g.
   "remind me next monday to run this script again", "set a reminder to follow up tomorrow at
-  9am". Captures the current workspace (directory, git repo/branch) and, when the user refers
+  9am". Captures the current workspace (directory and git repository) and, when the user refers
   to a command or script to re-run, stores it so the reminder is actionable later.
 argument-hint: "[what to be reminded of] [when]"
-allowed-tools:
-  - "Bash(reminders:*)"
-  - "Bash(git remote:*)"
-  - "Bash(git rev-parse:*)"
-  - "Bash(git branch:*)"
-  - "Bash(pwd)"
 ---
 
 # Create a reminder
@@ -26,29 +20,34 @@ File an Apple/iCloud Reminder via the `reminders` CLI on the dedicated **`Claude
 
 ## 2. Gather workspace metadata
 Collect what you can, quietly — skip any key you can't determine:
-- `workspace` — the current directory (`${CLAUDE_PROJECT_DIR}`, or `pwd`)
+- `workspace` — the physical current working directory (`pwd -P`)
 - `repo` — `git remote get-url origin` (only if inside a git repo)
+- `repo-id` — a stable form of an SSH/HTTPS origin: lowercase host plus path, with any user,
+  scheme, trailing slash, and `.git` suffix removed (e.g. `github.com/acme/api`)
 - `branch` — `git rev-parse --abbrev-ref HEAD` (only if inside a git repo)
 - `command` — the exact command/script the user wants to re-run, if they referred to one
   (e.g. "run this script **again**" → the script just run or named in the conversation)
-- `session` — `${CLAUDE_SESSION_ID}`
+- `session` — a session identifier only when the client exposes one reliably; do not require it
 - `created` — the current time in ISO-8601
 
 ## 3. Build the notes
-Notes = one short human line, a blank line, then a `[claude-meta]` block of `key=value` lines (one
-per line). The full spec is in `${CLAUDE_PLUGIN_ROOT}/reference/metadata-format.md`. Example:
+Notes = one short human line, a blank line, then an `[agent-meta]` block of `key=value` lines (one
+per line). The full format is documented in this plugin's `reference/metadata-format.md`. Example:
 
 ```
 Re-run the data sync and check the output.
 
-[claude-meta]
+[agent-meta]
 workspace=/Users/me/repos/acme/api
 repo=git@github.com:acme/api.git
+repo-id=github.com/acme/api
 branch=main
 command=./scripts/sync.sh --full
-session=abc123
 created=2026-06-02T14:30:00Z
 ```
+
+Always write `[agent-meta]`. When reading an existing reminder, accept both `[agent-meta]` and the
+legacy `[claude-meta]` marker.
 
 ## 4. Create it
 ```bash
@@ -59,5 +58,4 @@ human-readable due time. Keep the returned `externalId` in mind for any immediat
 
 ## 5. If it fails
 If the command errors because the `Claude` list isn't allowed / doesn't exist, or Reminders access
-isn't granted, run the **reminders-setup** skill (or tell the user to run `/reminders:reminders-setup`)
-to fix it, then retry. Don't silently give up.
+isn't granted, follow the **reminders-setup** skill, then retry. Don't silently give up.

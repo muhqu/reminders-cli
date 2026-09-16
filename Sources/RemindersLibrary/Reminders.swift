@@ -17,11 +17,13 @@ private extension EKReminder {
     }
 }
 
-func format(_ reminder: EKReminder, at index: Int?, listName: String? = nil) -> String {
+func format(_ reminder: EKReminder, at index: Int?, listName: String? = nil,
+    includeNotes: Bool = true) -> String
+{
     let dateString = formattedDueDate(from: reminder).map { " (\($0))" } ?? ""
     let priorityString = Priority(reminder.mappedPriority).map { " (priority: \($0))" } ?? ""
     let listString = listName.map { "\($0): " } ?? ""
-    let notesString = reminder.notes.map { " (\($0))" } ?? ""
+    let notesString = includeNotes ? reminder.notes.map { " (\($0))" } ?? "" : ""
     let indexString = index.map { "\($0): " } ?? ""
     return "\(listString)\(indexString)\(reminder.title ?? "<unknown>")\(notesString)\(dateString)\(priorityString)"
 }
@@ -128,7 +130,7 @@ public final class Reminders {
     }
 
     func getAllReminders(dueOn dueDate: DateComponents?, includeOverdue: Bool,
-        displayOptions: DisplayOptions) -> [EKReminder]
+        displayOptions: DisplayOptions, metadataCriteria: [MetadataCriterion] = []) -> [EKReminder]
     {
         let semaphore = DispatchSemaphore(value: 0)
         let calendar = Calendar.current
@@ -136,6 +138,10 @@ public final class Reminders {
 
         self.reminders(on: self.getCalendars(), displayOptions: displayOptions) { reminders in
             for reminder in reminders {
+                guard ReminderMetadata(notes: reminder.notes).matches(any: metadataCriteria) else {
+                    continue
+                }
+
                 guard let dueDate = dueDate?.date else {
                     result.append(reminder)
                     continue
@@ -163,7 +169,8 @@ public final class Reminders {
     }
 
     func getListItems(withName name: String, dueOn dueDate: DateComponents?, includeOverdue: Bool,
-        displayOptions: DisplayOptions, sort: Sort, sortOrder: SortOrder) -> [EKReminder]
+        displayOptions: DisplayOptions, sort: Sort, sortOrder: SortOrder,
+        metadataCriteria: [MetadataCriterion] = []) -> [EKReminder]
     {
         let semaphore = DispatchSemaphore(value: 0)
         let calendar = Calendar.current
@@ -172,6 +179,10 @@ public final class Reminders {
         self.reminders(on: [self.calendar(withName: name)], displayOptions: displayOptions) { reminders in
             let reminders = sort == .none ? reminders : reminders.sorted(by: sort.sortFunction(order: sortOrder))
             for reminder in reminders {
+                guard ReminderMetadata(notes: reminder.notes).matches(any: metadataCriteria) else {
+                    continue
+                }
+
                 guard let dueDate = dueDate?.date else {
                     result.append(reminder)
                     continue
