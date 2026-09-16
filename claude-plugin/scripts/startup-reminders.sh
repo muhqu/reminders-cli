@@ -15,7 +15,7 @@ emit() {
 }
 
 workspace=${1:-$PWD}
-reminders_bin=${REMINDERS_BIN:-reminders}
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 
 normalize_repo() {
     remote=$1
@@ -44,21 +44,13 @@ normalize_repo() {
     printf '%s/%s\n' "$host" "$path" | tr '[:upper:]' '[:lower:]'
 }
 
-case "$reminders_bin" in
-    */*)
-        [ -x "$reminders_bin" ] || {
-            emit "hint" "Reminders startup check skipped: install reminders-cli, then run the reminders setup skill."
-            exit 0
-        }
-        ;;
-    *)
-        reminders_bin=$(command -v "$reminders_bin" 2>/dev/null || true)
-        [ -n "$reminders_bin" ] || {
-            emit "hint" "Reminders startup check skipped: install reminders-cli, then run the reminders setup skill."
-            exit 0
-        }
-        ;;
-esac
+cli_result=$("$plugin_root/scripts/ensure-compatible-cli.sh")
+cli_status=$(printf '%s\n' "$cli_result" | sed -n '1p')
+if [ "$cli_status" != "ok" ]; then
+    emit "hint" "$(printf '%s\n' "$cli_result" | sed '1d')"
+    exit 0
+fi
+reminders_bin=$(printf '%s\n' "$cli_result" | sed -n '2p')
 
 physical_workspace=$(CDPATH= cd -- "$workspace" 2>/dev/null && pwd -P)
 [ -n "$physical_workspace" ] || physical_workspace=$workspace

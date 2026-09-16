@@ -2,6 +2,16 @@
 
 set -u
 
+if [ "${1-}" = "--version" ]; then
+    printf '%s\n' "${MOCK_REMINDERS_VERSION:-3.1.0}"
+    exit 0
+fi
+
+if [ "${1-}" = "show" ] && [ "${2-}" = "--help" ]; then
+    printf '%s\n' 'USAGE: reminders show [--metadata <metadata>] [--hide-notes]'
+    exit 0
+fi
+
 has_pair() {
     expected_key=$1
     expected_value=$2

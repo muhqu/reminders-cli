@@ -33,3 +33,7 @@ jobs:
         run: swift build -Xswiftc -warnings-as-errors
       - name: Test
         run: swift test -Xswiftc -warnings-as-errors
+      - name: Test agent plugin
+        run: |
+          claude-plugin/tests/test-cli-management.sh
+          claude-plugin/tests/test-session-start.sh

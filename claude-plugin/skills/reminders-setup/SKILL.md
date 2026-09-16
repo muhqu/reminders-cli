@@ -1,32 +1,45 @@
 ---
 name: reminders-setup
 description: >-
-  Set up or troubleshoot the reminders plugin: verify the `reminders` CLI is installed, Reminders
-  access is granted, the config exists, and the dedicated `Claude` list exists and is allowlisted.
-  Use when first setting up, or when creating/listing reminders fails.
+  Set up or troubleshoot the reminders plugin: install or upgrade the `reminders` CLI, verify
+  Reminders access, create the config, and ensure the dedicated `Claude` list exists and is
+  allowlisted. Use when first setting up, or when creating/listing reminders fails.
 ---
 
 # Reminders setup / doctor
 
-Run these checks in order. Report each result. Stop to ask the user only when an action needs them
-(installing software, granting an OS permission, or editing their config).
+Run these checks in order. Report each result. The user has authorized automatic CLI installation
+and upgrades. Stop to ask only when granting an OS permission or editing their config needs them.
 
 This integration is local-macOS-only because `reminders` uses EventKit. On Linux, including remote
 or cloud agent sessions, explain that reminder access is unavailable and stop without treating it
 as an error.
 
-## 1. CLI installed
-```bash
-command -v reminders
+## 1. Compatible CLI installed
+
+Run `../../scripts/ensure-compatible-cli.sh`, resolved from this skill's base directory:
+
 ```
-If missing, tell the user to install it (do **not** auto-install):
+<skill-base>/../../scripts/ensure-compatible-cli.sh
 ```
-brew install muhqu/tap/reminders-cli
+
+The script checks the exact CLI capabilities required by this plugin. If the CLI is missing or
+incompatible, it automatically runs Homebrew to install or upgrade `muhqu/tap/reminders-cli`. Its
+output is:
+
 ```
+ok
+<absolute reminders binary path>
+<ready|installed|upgraded>
+<version>
+```
+
+Use the returned absolute path for every subsequent command. If it returns `error`, report its
+message and stop; this means Homebrew is unavailable or no compatible formula release exists.
 
 ## 2. Reminders access (macOS TCC)
 ```bash
-reminders show-lists --all --format json
+"<reminders-binary>" show-lists --all --format json
 ```
 `show-lists --all` works without any config (it enumerates every list for discovery). If it errors
 with an access/permission error, the binary lacks Reminders access: the first run from a terminal
@@ -37,17 +50,18 @@ triggers the macOS permission prompt — have the user grant it; otherwise enabl
 Check for `~/.config/reminders-cli.yml` (honor `REMINDERS_CLI_CONFIG` / `XDG_CONFIG_HOME` if set).
 If absent, create a starter:
 ```bash
-reminders init-config
+"<reminders-binary>" init-config
 ```
 
 ## 4. Dedicated `Claude` list (on iCloud)
 - If `Claude` is **not** present in `reminders show-lists --all`, create it:
   ```bash
-  reminders new-list "Claude" --source iCloud
+  "<reminders-binary>" new-list "Claude" --source iCloud
   ```
   If the source name `iCloud` isn't found, omit `--source` to use the default source — but prefer
   iCloud so reminders sync to the user's other devices.
-- Then confirm it is **allowlisted**: `reminders show-lists` (without `--all`) must list `Claude`.
+- Then confirm it is **allowlisted**: `"<reminders-binary>" show-lists` (without `--all`) must
+  list `Claude`.
   If it doesn't, the config isn't granting it. Open `~/.config/reminders-cli.yml` and add `Claude`
   to `allowed_lists`:
   ```yaml
