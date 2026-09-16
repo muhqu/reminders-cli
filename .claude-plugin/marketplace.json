@@ -5,7 +5,7 @@
     {
       "name": "reminders",
       "source": "./claude-plugin",
-      "description": "Create and manage Apple/iCloud Reminders from Claude Code"
+      "description": "Create and manage Apple/iCloud Reminders from Claude Code and GitHub Copilot CLI"
     }
   ]
 }

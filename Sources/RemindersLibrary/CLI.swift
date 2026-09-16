@@ -65,6 +65,13 @@ private struct ShowAll: ParsableCommand {
     var dueDate: DateComponents?
 
     @Option(
+        help: "Show reminders whose notes metadata matches KEY=VALUE; repeat for OR matching")
+    var metadata: [MetadataCriterion] = []
+
+    @Flag(help: "Omit reminder notes from plain output")
+    var hideNotes = false
+
+    @Option(
         name: .shortAndLong,
         help: "format, either of 'plain' or 'json'")
     var format: OutputFormat = .plain
@@ -86,7 +93,7 @@ private struct ShowAll: ParsableCommand {
 
         let items = reminders.getAllReminders(
             dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-            displayOptions: displayOptions)
+            displayOptions: displayOptions, metadataCriteria: self.metadata)
 
         switch format {
         case .json:
@@ -94,7 +101,9 @@ private struct ShowAll: ParsableCommand {
         case .plain:
             for (i, reminder) in items.enumerated() {
                 let listName = reminder.calendar.title
-                print(RemindersLibrary.format(reminder, at: i, listName: listName))
+                let index = self.metadata.isEmpty ? i : nil
+                print(RemindersLibrary.format(
+                    reminder, at: index, listName: listName, includeNotes: !self.hideNotes))
             }
         }
     }
@@ -134,6 +143,13 @@ private struct Show: ParsableCommand {
     var dueDate: DateComponents?
 
     @Option(
+        help: "Show reminders whose notes metadata matches KEY=VALUE; repeat for OR matching")
+    var metadata: [MetadataCriterion] = []
+
+    @Flag(help: "Omit reminder notes from plain output")
+    var hideNotes = false
+
+    @Option(
         name: .shortAndLong,
         help: "format, either of 'plain' or 'json'")
     var format: OutputFormat = .plain
@@ -155,15 +171,17 @@ private struct Show: ParsableCommand {
 
         let items = reminders.getListItems(
             withName: self.listName, dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-            displayOptions: displayOptions, sort: sort, sortOrder: sortOrder)
+            displayOptions: displayOptions, sort: sort, sortOrder: sortOrder,
+            metadataCriteria: self.metadata)
 
         switch format {
         case .json:
             print(encodeToJson(data: items))
         case .plain:
             for (i, reminder) in items.enumerated() {
-                let index = sort == .none ? i : nil
-                print(RemindersLibrary.format(reminder, at: index))
+                let index = sort == .none && self.metadata.isEmpty ? i : nil
+                print(RemindersLibrary.format(
+                    reminder, at: index, includeNotes: !self.hideNotes))
             }
         }
     }

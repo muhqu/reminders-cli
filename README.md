@@ -30,14 +30,14 @@ allowlist is a guardrail on what *this tool* will touch — not an OS sandbox.
 
 ```
 $ reminders show-lists
-Soon
-Eventually
+Work
+Personal
 ```
 
 #### Show reminders on a specific list
 
 ```
-$ reminders show Soon
+$ reminders show Work
 0 Write README
 1 Ship reminders-cli
 ```
@@ -45,29 +45,29 @@ $ reminders show Soon
 #### Complete an item on a list
 
 ```
-$ reminders complete Soon 0
+$ reminders complete Work 0
 Completed 'Write README'
-$ reminders show Soon
+$ reminders show Work
 0 Ship reminders-cli
 ```
 
 #### Undo a completed item
 
 ```
-$ reminders show Soon --only-completed
+$ reminders show Work --only-completed
 0 Write README
-$ reminders uncomplete Soon 0
+$ reminders uncomplete Work 0
 Uncompleted 'Write README'
-$ reminders show Soon
+$ reminders show Work
 0 Write README
 ```
 
 #### Edit an item on a list
 
 ```
-$ reminders edit Soon 0 Some edited text
+$ reminders edit Work 0 Some edited text
 Updated reminder 'Some edited text'
-$ reminders show Soon
+$ reminders show Work
 0 Ship reminders-cli
 1 Some edited text
 ```
@@ -75,19 +75,19 @@ $ reminders show Soon
 #### Delete an item on a list
 
 ```
-$ reminders delete Soon 0
+$ reminders delete Work 0
 Completed 'Write README'
-$ reminders show Soon
+$ reminders show Work
 0 Ship reminders-cli
 ```
 
 #### Add a reminder to a list
 
 ```
-$ reminders add Soon Contribute to open source
-$ reminders add Soon Go to the grocery store --due-date "tomorrow 9am"
-$ reminders add Soon Something really important --priority high
-$ reminders show Soon
+$ reminders add Work Contribute to open source
+$ reminders add Work Go to the grocery store --due-date "tomorrow 9am"
+$ reminders add Work Something really important --priority high
+$ reminders show Work
 0: Ship reminders-cli
 1: Contribute to open source
 2: Go to the grocery store (in 10 hours)
@@ -104,10 +104,26 @@ $ reminders show-all --due-date today --include-overdue
 1: Contribute to open source (in 3 hours)
 $ reminders show-all --due-date 2025-02-16
 1: Contribute to open source (in 3 hours)
-$ reminders show Soon --due-date today --include-overdue
+$ reminders show Work --due-date today --include-overdue
 0: Ship reminders-cli (2 days ago)
 1: Contribute to open source (in 3 hours)
 ```
+
+#### Filter reminders by notes metadata
+
+Agent-created reminders can include an `[agent-meta]` block in their notes. Use
+repeatable `--metadata KEY=VALUE` options for exact OR matching, and
+`--hide-notes` for concise plain output:
+
+```
+$ reminders show Claude --metadata "workspace=/Users/me/repos/acme/api" \
+    --metadata "repo-id=github.com/acme/api" --hide-notes
+Review the release checklist (in 2 hours)
+```
+
+Legacy `[claude-meta]` blocks are also supported. Metadata-filtered plain output
+omits positional indexes because those indexes would not safely identify items
+in the unfiltered list; use JSON `externalId` values for follow-up mutations.
 
 #### See help for more examples
 
@@ -146,16 +162,32 @@ $ make build
 $ cp .build/apple/Products/Release/reminders /usr/local/bin/reminders
 ```
 
-## Claude Code plugin
+## Agent plugin for Claude Code and GitHub Copilot CLI
 
-This repo also ships a [Claude Code](https://claude.com/claude-code) plugin (in
-[`claude-plugin/`](claude-plugin/)) that lets Claude create and manage Apple/iCloud Reminders for
-you — e.g. *"remind me next Monday to run this script again"* files a reminder on a dedicated
-`Claude` list, capturing the workspace and the command to re-run.
+This repo also ships a cross-client agent plugin in [`claude-plugin/`](claude-plugin/) that lets
+Claude Code and GitHub Copilot CLI create and manage Apple/iCloud Reminders. For example,
+*"remind me next Monday to run this script again"* files a reminder on the dedicated `Claude` list,
+capturing the workspace and command to re-run. New reminders use `[agent-meta]`; existing
+`[claude-meta]` reminders remain readable.
+
+The integration is for local macOS sessions because the CLI uses EventKit. Remote/cloud Linux
+agents gracefully skip the session-start lookup and cannot access Apple Reminders.
+
+### Claude Code
 
 ```
 /plugin marketplace add muhqu/reminders-cli
 /plugin install reminders@reminders-cli
 ```
 
-See [`claude-plugin/README.md`](claude-plugin/README.md) for prerequisites and usage.
+### GitHub Copilot CLI
+
+```
+copilot plugin install muhqu/reminders-cli:claude-plugin
+```
+
+At the start or resumption of a local session, the plugin shows incomplete reminders from the
+`Claude` list that are due today or overdue and whose metadata matches the exact workspace or
+repository. It stays silent when there are no matches and never filters by branch.
+
+See [`claude-plugin/README.md`](claude-plugin/README.md) for prerequisites, setup, and usage.

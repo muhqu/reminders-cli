@@ -4,17 +4,16 @@ description: >-
   Set up or troubleshoot the reminders plugin: verify the `reminders` CLI is installed, Reminders
   access is granted, the config exists, and the dedicated `Claude` list exists and is allowlisted.
   Use when first setting up, or when creating/listing reminders fails.
-allowed-tools:
-  - "Bash(reminders:*)"
-  - "Bash(command -v reminders)"
-  - "Read"
-  - "Edit"
 ---
 
 # Reminders setup / doctor
 
 Run these checks in order. Report each result. Stop to ask the user only when an action needs them
 (installing software, granting an OS permission, or editing their config).
+
+This integration is local-macOS-only because `reminders` uses EventKit. On Linux, including remote
+or cloud agent sessions, explain that reminder access is unavailable and stop without treating it
+as an error.
 
 ## 1. CLI installed
 ```bash
@@ -59,4 +58,4 @@ reminders init-config
 
 ## Done
 When all four checks pass, tell the user they're ready — they can say things like
-*"remind me tomorrow at 9am to ..."* and Claude will file it on the `Claude` list.
+*"remind me tomorrow at 9am to ..."* and their coding agent will file it on the `Claude` list.
