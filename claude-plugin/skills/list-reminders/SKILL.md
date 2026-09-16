@@ -11,11 +11,20 @@ argument-hint: "[optional filter, e.g. 'this repo' or 'today']"
 
 Read reminders via the `reminders` CLI and present them.
 
+## Ensure a compatible CLI
+
+Before the first CLI call, run `../../scripts/ensure-compatible-cli.sh`, resolved from this skill's
+base directory. It automatically installs or upgrades `muhqu/tap/reminders-cli` with Homebrew when
+the CLI is missing or incompatible. On success, use the absolute binary path from the second output
+line for every command below. On `error`, report the message and stop; never silently fall back to
+behavior unsupported by the installed CLI.
+
 ## Fetch
 ```bash
-reminders show "Claude" --format json
+"<reminders-binary>" show "Claude" --format json
 ```
-Use `reminders show-all --format json` if the user wants reminders across all (allowlisted) lists.
+Use `"<reminders-binary>" show-all --format json` if the user wants reminders across all
+(allowlisted) lists.
 Add `--include-completed` only if they ask to see completed ones.
 
 For **this project/repository**, gather the physical current directory with `pwd -P` and the origin
@@ -25,7 +34,7 @@ SSH/HTTPS origin to lowercase host plus path and removing any user, scheme, trai
 semantics:
 
 ```bash
-reminders show "Claude" --metadata "workspace=<exact-directory>" \
+"<reminders-binary>" show "Claude" --metadata "workspace=<exact-directory>" \
   --metadata "repo=<origin-url>" --metadata "repo-id=<normalized-origin>" --format json
 ```
 
@@ -35,7 +44,7 @@ filter by branch. For date scopes, use the CLI's existing date options rather th
 in the model. For example:
 
 ```bash
-reminders show "Claude" --due-date today --include-overdue --format json
+"<reminders-binary>" show "Claude" --due-date today --include-overdue --format json
 ```
 
 ## Parse
@@ -49,7 +58,7 @@ List each matching reminder with its title, a human-friendly due date, and the u
 especially `command` when present.
 
 ## Act (on request, target by `externalId`)
-- **Complete:** `reminders complete "Claude" <externalId>`
-- **Snooze / reschedule:** `reminders edit "Claude" <externalId> --due-date "<new when>"`
+- **Complete:** `"<reminders-binary>" complete "Claude" <externalId>`
+- **Snooze / reschedule:** `"<reminders-binary>" edit "Claude" <externalId> --due-date "<new when>"`
 - **Re-run:** if a reminder carries a `command`, offer to run it — confirm with the user first,
   and prefer running it from the reminder's `workspace` directory.

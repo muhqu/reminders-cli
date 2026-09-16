@@ -5,7 +5,7 @@
       {
         "type": "command",
         "bash": "\"${PLUGIN_ROOT}/com.github.copilot/hooks/session-start.sh\"",
-        "timeoutSec": 10
+        "timeoutSec": 120
       }
     ]
   }

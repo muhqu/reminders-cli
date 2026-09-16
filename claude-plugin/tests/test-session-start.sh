@@ -64,7 +64,7 @@ Reminders startup check skipped: run the reminders setup skill to verify the Cla
 missing_result=$(REMINDERS_BIN="$temp_dir/missing-reminders" REMINDERS_HOOK_OS=Darwin \
     "$plugin_root/scripts/startup-reminders.sh" "$workspace_dir")
 assert_equal "missing CLI" "hint
-Reminders startup check skipped: install reminders-cli, then run the reminders setup skill." "$missing_result"
+Configured reminders CLI '$temp_dir/missing-reminders' is missing or lacks required metadata filtering support." "$missing_result"
 
 hook_input=$(printf '{"cwd":"%s","source":"resume"}' "$workspace_dir")
 claude_output=$(printf '%s' "$hook_input" | \

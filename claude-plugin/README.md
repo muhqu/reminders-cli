@@ -11,7 +11,8 @@ https://github.com/muhqu/reminders-cli
 This plugin is for local macOS sessions. The CLI uses EventKit, so remote/cloud Linux agents
 gracefully skip startup lookup and cannot access Apple Reminders.
 
-1. **Install the CLI:** `brew install muhqu/tap/reminders-cli`
+1. **Install Homebrew:** the plugin automatically installs or upgrades
+   `muhqu/tap/reminders-cli` when its skills or startup hook need a newer compatible CLI.
 2. **Grant Reminders access:** run `reminders show-lists --all` once and approve the macOS prompt
    (or enable it under System Settings ▸ Privacy & Security ▸ Reminders).
 3. **Run the `reminders-setup` skill:** it creates the dedicated `Claude` list on iCloud and
@@ -57,8 +58,8 @@ On every new or resumed local session, a hook queries only incomplete reminders 
 list that are due today or overdue. It asks the CLI to match the exact current workspace **or** the
 raw/normalized repository origin through repeatable `--metadata` criteria; branch metadata is
 ignored. Matching items appear as a concise persistent startup message. No matches are silent.
-Missing CLI, config, list access, or macOS Reminders permission produces a short non-blocking setup
-hint.
+The hook automatically installs or upgrades an incompatible CLI through Homebrew. Missing
+Homebrew, config, list access, or macOS Reminders permission produces a concise setup hint.
 
 ## How metadata is stored
 
@@ -72,5 +73,6 @@ accept the legacy `[claude-meta]` marker. See
 The deterministic test harness uses a mock `reminders` executable and does not touch EventKit:
 
 ```
+./tests/test-cli-management.sh
 ./tests/test-session-start.sh
 ```
