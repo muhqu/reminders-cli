@@ -101,8 +101,9 @@ private struct ShowAll: ParsableCommand {
         case .plain:
             for (i, reminder) in items.enumerated() {
                 let listName = reminder.calendar.title
+                let index = self.metadata.isEmpty ? i : nil
                 print(RemindersLibrary.format(
-                    reminder, at: i, listName: listName, includeNotes: !self.hideNotes))
+                    reminder, at: index, listName: listName, includeNotes: !self.hideNotes))
             }
         }
     }
